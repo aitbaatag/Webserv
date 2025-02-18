@@ -22,3 +22,18 @@ std::string HttpRequest::getMethod(const std::string &requestLine) {
 }
 
 // uri: /path/to/resource
+std::string HttpRequest::getUri(const std::string &requestLine) {
+  std::string uri;
+  size_t start = requestLine.find(' ') + 1;
+  size_t end = requestLine.find(' ', start);
+  uri = requestLine.substr(start, end - start);
+  return uri;
+}
+
+// httpVersion: HTTP/1.1
+std::string HttpRequest::getHttpVersion(const std::string &requestLine) {
+  std::string httpVersion;
+  size_t start = requestLine.find(' ', requestLine.find(' ') + 1) + 1;
+  httpVersion = requestLine.substr(start);
+  return httpVersion;
+}
