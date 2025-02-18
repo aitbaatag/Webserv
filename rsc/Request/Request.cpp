@@ -54,6 +54,26 @@ void HttpRequest::parseHeaders(const std::string &headers,
   }
 }
 
-HTTPRequest HttpRequest::parseRequest(const std::string &request) {
+HTTPRequest HttpRequest::parseRequest(std::string &request) {
   HTTPRequest httprequest;
+  std::istringstream iss(request);
+  std::string requestLine;
+  std::string headers;
+  std::string body;
+
+  std::getline(iss, requestLine);
+  parseRequestLine(requestLine, httprequest);
+
+  std::string line;
+  while (std::getline(iss, line)) {
+    if (line == "\r" || line.empty()) {
+      break;
+    }
+    headers += line + "\n";
+  }
+  parseHeaders(headers, httprequest);
+
+  std::getline(iss, body);
+  httprequest.body = body;
+  return httprequest;
 }
