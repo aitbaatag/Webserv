@@ -1,39 +1,59 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include <cstddef>
+#include <iterator>
+#include <sstream>
 
 HttpRequest::HttpRequest(std::string &request) : request(request) {}
-
+// parse http request line example: GET /path/to/resource HTTP/1.1
 void HttpRequest::parseRequestLine(const std::string &requestLine,
                                    HTTPRequest &httprequest) {
-  httprequest.method = getMethod(requestLine);
-  httprequest.uri = getUri(requestLine);
-  httprequest.httpVersion = getHttpVersion(requestLine);
+  std::istringstream iss(requestLine);
+
+  iss >> httprequest.method;
+  iss >> httprequest.uri;
+  iss >> httprequest.httpVersion;
+
+  // TODO error handling for invalid request line
 }
 
-// private methods to parse the request requestLine
-// example: GET /path/to/resource HTTP/1.1
-// method: GET
-std::string HttpRequest::getMethod(const std::string &requestLine) {
-  std::string method;
-  size_t start = 0;
-  size_t end = requestLine.find(' ');
-  method = requestLine.substr(start, end - start);
-  return method;
+// parse http request headers
+// example:
+// GET /index.html HTTP/1.1
+// Host: localhost:8080
+// User-Agent: Mozilla/5.0
+// Accept: text/html,application/xhtml+xml
+// Accept-Language: en-US,en;q=0.9
+// Accept-Encoding: gzip, deflate
+// Connection: keep-alive
+// Cookie: sessionId=abc123
+// Content-Length: 0
+
+void HttpRequest::parseHeaders(const std::string &headers,
+                               HTTPRequest &httprequest) {
+  std::istringstream iss(headers);
+  std::string line;
+  // SKIP the first line
+  iss >> line;
+  while (std::getline(iss, line)) {
+    if (line == "\r" || line.empty()) {
+      break;
+    }
+    size_t colonPos = line.find(":");
+    if (colonPos != std::string::npos) {
+      std::string key = line.substr(0, colonPos);
+      std::string value = line.substr(colonPos + 1);
+      size_t firstNonSpace = value.find_first_not_of(" ");
+      if (firstNonSpace != std::string::npos) {
+        value = value.substr(firstNonSpace);
+      }
+      if (value.back() == '\r') {
+        value.pop_back(); // remove '\r' at the end of value
+      }
+      httprequest.headers[key] = value;
+    }
+  }
 }
 
-// uri: /path/to/resource
-std::string HttpRequest::getUri(const std::string &requestLine) {
-  std::string uri;
-  size_t start = requestLine.find(' ') + 1;
-  size_t end = requestLine.find(' ', start);
-  uri = requestLine.substr(start, end - start);
-  return uri;
-}
-
-// httpVersion: HTTP/1.1
-std::string HttpRequest::getHttpVersion(const std::string &requestLine) {
-  std::string httpVersion;
-  size_t start = requestLine.find(' ', requestLine.find(' ') + 1) + 1;
-  httpVersion = requestLine.substr(start);
-  return httpVersion;
+HTTPRequest HttpRequest::parseRequest(const std::string &request) {
+  HTTPRequest httprequest;
 }
