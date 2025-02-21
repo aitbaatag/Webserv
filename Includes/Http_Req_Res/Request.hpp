@@ -1,29 +1,69 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
 
-#include <iostream>
 #include <map>
 #include <string>
-struct HTTPRequest {
-  std::string method;      // GET, POST, DELETE
-  std::string uri;         // /path/to/resource
-  std::string httpVersion; // HTTP/1.1
+enum ParseState {
+  STATE_REQUEST_LINE,
+  STATE_METHOD,
+  STATE_G_METHOD,
+  STATE_P_METHOD,
+  STATE_D_METHOD,
+  STATE_URI,
+  STATE_VERSION,
+  STATE_HEADERS,
+  STATE_BODY,
+  STATE_CHUNK_SIZE,
+  STATE_CHUNK_DATA,
+  STATE_CHUNK_END,
+  STATE_COMPLETE
+};
+struct Request {
+  std::string method;
+  std::string uri;
+  std::string version;
   std::map<std::string, std::string> headers;
   std::string body;
+  ParseState state;
+  size_t chunk_size;
+  size_t body_length;
+  bool complete;    // the request is complete
+  int error_status; // the error status of the request
 };
+
+/*class HTTPRequestError {*/
+/*public:*/
+/*  std::map<int, const std::string> error_map = {*/
+/*      {405, "Method Not Allowed"},*/
+/*      {404, "Not Found"},*/
+/*      {505, "HTTP Version Not Supported"},*/
+/*      {501, "Not Implemented"},*/
+/*      {502, "Bad Gateway"},*/
+/*      {503, "Service Unavailable"},*/
+/*      {504, "Gateway Timeout"},*/
+/*      {505, "HTTP Version Not Supported"},*/
+/*      {506, "Variant Also Negotiates"},*/
+/*      {507, "Insufficient Storage"},*/
+/*      {508, "Loop Detected"},*/
+/*      {510, "Not Extended"},*/
+/*      {511, "Network Authentication Required"},*/
+/*      {599, "Network Connect Timeout Error"},*/
+/*  };*/
+/*};*/
 
 class HttpRequest {
 private:
-  std::string &request;
-  std::map<std::string, std::string> getHeaders(const std::string &headers);
-  std::string getBody(const std::string &body);
-  void parseRequestLine(const std::string &requestLine,
-                        HTTPRequest &httprequest);
-  void parseHeaders(const std::string &headers, HTTPRequest &httprequest);
-  void parseBody(const std::string &body, HTTPRequest &httprequest);
+  Request &Srequest;
+  void parseRequestLine(std::string &reqBuff);
+  void parseHeaders(std::string &reqBuff);
+  void parseBody(std::string &reqBuff);
+  void parseChunkSize(std::string &reqBuff);
+  void parseChunkData(std::string &reqBuff);
+  void parseChunkEnd(std::string &reqBuff);
 
 public:
-  HttpRequest(std::string &request);
-  HTTPRequest parseRequest(const std::string &request);
+  HttpRequest(Request &Sreq);
+  void parseIncrementally(std::string &reqBuff);
+  bool isComplete();
 };
 #endif
