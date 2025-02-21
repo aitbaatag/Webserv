@@ -1,79 +1,60 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include <cstddef>
-#include <iterator>
-#include <sstream>
+#include <string>
 
-HttpRequest::HttpRequest(std::string &request) : request(request) {}
-// parse http request line example: GET /path/to/resource HTTP/1.1
-void HttpRequest::parseRequestLine(const std::string &requestLine,
-                                   HTTPRequest &httprequest) {
-  std::istringstream iss(requestLine);
-
-  iss >> httprequest.method;
-  iss >> httprequest.uri;
-  iss >> httprequest.httpVersion;
-
-  // TODO error handling for invalid request line
+HttpRequest::HttpRequest(Request &Sreq) : Srequest(Sreq) {
+  Srequest.state = STATE_REQUEST_LINE;
+  Srequest.complete = false;
+  Srequest.error_status = 0;
 }
-
-// parse http request headers
-// example:
-// GET /index.html HTTP/1.1
-// Host: localhost:8080
-// User-Agent: Mozilla/5.0
-// Accept: text/html,application/xhtml+xml
-// Accept-Language: en-US,en;q=0.9
-// Accept-Encoding: gzip, deflate
-// Connection: keep-alive
-// Cookie: sessionId=abc123
-// Content-Length: 0
-
-void HttpRequest::parseHeaders(const std::string &headers,
-                               HTTPRequest &httprequest) {
-  std::istringstream iss(headers);
-  std::string line;
-  // SKIP the first line
-  iss >> line;
-  while (std::getline(iss, line)) {
-    if (line == "\r" || line.empty()) {
-      break;
-    }
-    size_t colonPos = line.find(":");
-    if (colonPos != std::string::npos) {
-      std::string key = line.substr(0, colonPos);
-      std::string value = line.substr(colonPos + 1);
-      size_t firstNonSpace = value.find_first_not_of(" ");
-      if (firstNonSpace != std::string::npos) {
-        value = value.substr(firstNonSpace);
-      }
-      if (value.back() == '\r') {
-        value.pop_back(); // remove '\r' at the end of value
-      }
-      httprequest.headers[key] = value;
+bool HttpRequest::isComplete() { return Srequest.complete; }
+void HttpRequest::validMethod(char c) {}
+void HttpRequest::parseRequestLine(std::string &reqBuff) {
+  size_t pos = 0;
+  while (pos < reqBuff.length()) {
+    char c = reqBuff[pos];
+    switch (Srequest.state) {
+    case STATE_METHOD:
+      if (c == 'G') {
+        Srequest.method += c;
+        Srequest.state = STATE_G_METHOD;
+      } else if (c == 'P') {
+        Srequest.method += c;
+        Srequest.state = STATE_P_METHOD;
+      } else if (c == 'D') {
+        Srequest.method += c;
+        Srequest.state = STATE_D_METHOD;
+      } else
+        Srequest.error_status = 405;
     }
   }
 }
 
-HTTPRequest HttpRequest::parseRequest(std::string &request) {
-  HTTPRequest httprequest;
-  std::istringstream iss(request);
-  std::string requestLine;
-  std::string headers;
-  std::string body;
+void HttpRequest::parseIncrementally(std::string &reqBuff) {
+  size_t pos = 0;
+  while (pos < reqBuff.length()) {
 
-  std::getline(iss, requestLine);
-  parseRequestLine(requestLine, httprequest);
-
-  std::string line;
-  while (std::getline(iss, line)) {
-    if (line == "\r" || line.empty()) {
+    switch (Srequest.state) {
+    case STATE_REQUEST_LINE:
+      parseRequestLine(reqBuff);
+      break;
+    case STATE_HEADERS:
+      parseHeaders(reqBuff);
+      break;
+    case STATE_BODY:
+      parseBody(reqBuff);
+      break;
+    case STATE_CHUNK_SIZE:
+      parseChunkSize(reqBuff);
+      break;
+    case STATE_CHUNK_DATA:
+      parseChunkData(reqBuff);
+      break;
+    case STATE_CHUNK_END:
+      parseChunkEnd(reqBuff);
+      break;
+    default:
       break;
     }
-    headers += line + "\n";
   }
-  parseHeaders(headers, httprequest);
-
-  std::getline(iss, body);
-  httprequest.body = body;
-  return httprequest;
 }
