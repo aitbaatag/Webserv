@@ -1,16 +1,23 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
 
+#include <iostream>
 #include <map>
 #include <string>
+#define CRLF "\r\n"
+#define CRLFCRLF "\r\n\r\n"
+#define GET "GET"
+#define POST "POST"
+#define DELETE "DELETE"
+enum StateRequestLine {
+  STATE_METHOD,
+  FIRST_SPACE,
+  SECOND_SPACE,
+  STATE_URI,
+  STATE_VERSION
+};
 enum ParseState {
   STATE_REQUEST_LINE,
-  STATE_METHOD,
-  STATE_G_METHOD,
-  STATE_P_METHOD,
-  STATE_D_METHOD,
-  STATE_URI,
-  STATE_VERSION,
   STATE_HEADERS,
   STATE_BODY,
   STATE_CHUNK_SIZE,
@@ -23,8 +30,8 @@ struct Request {
   std::string uri;
   std::string version;
   std::map<std::string, std::string> headers;
-  std::string body;
   ParseState state;
+  StateRequestLine stateRequestLine;
   size_t chunk_size;
   size_t body_length;
   bool complete;    // the request is complete
@@ -60,6 +67,8 @@ private:
   void parseChunkSize(std::string &reqBuff);
   void parseChunkData(std::string &reqBuff);
   void parseChunkEnd(std::string &reqBuff);
+  void validMethod(std::string &method);
+  void validURI(std::string &uri);
 
 public:
   HttpRequest(Request &Sreq);
