@@ -1,98 +1,117 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
 #include <string>
-
-HttpRequest::HttpRequest(Request &Sreq) : Srequest(Sreq) {
-  Srequest.state = STATE_REQUEST_LINE;
-  Srequest.complete = false;
-  Srequest.error_status = 0;
-}
-bool HttpRequest::isComplete() { return Srequest.complete; }
-void HttpRequest::validMethod(std::string &method) {
-  if (method != GET && method != POST && method != DELETE) {
-    Srequest.error_status = 405;
-    Srequest.complete = true;
-    std::cout << "Method Not Allowed" << std::endl;
-  }
-}
-void HttpRequest::validURI(std::string &uri) {
-  if (uri[0] != '/') {
-    Srequest.error_status = 404;
-    Srequest.complete = true;
-    std::cout << "Not Found" << std::endl;
-  }
-}
-void HttpRequest::parseRequestLine(std::string &reqBuff) {
-  size_t pos = 0;
+HttpRequest::HttpRequest() {}
+bool HttpRequest::parseRequestLine(HttpClient &client) {
+  std::string reqBuff = client.get_request_buffer();
+  size_t pos = client.get_pos();
   while (pos < reqBuff.length()) {
     char c = reqBuff[pos];
-    switch (Srequest.stateRequestLine) {
+    switch (client.Srequest.stateRequestLine) {
     case STATE_METHOD:
       if (c == ' ') {
-        validMethod(Srequest.method);
-        Srequest.stateRequestLine = FIRST_SPACE;
+        if (!validMethod(client, client.Srequest.method)) {
+          client.Srequest.error_status = 405; // Method Not Allowed
+          client.set_request_status(Failed);
+          std::cout << "Method Not Allowed" << std::endl;
+          return false;
+        }
+        client.Srequest.stateRequestLine = STATE_URI;
       } else {
-        Srequest.method += c;
-      }
-      break;
-    case FIRST_SPACE:
-      if (c == ' ') {
-        Srequest.stateRequestLine = STATE_URI;
-      } else {
-        Srequest.error_status = 400; // Bad Request
-        Srequest.complete = true;
-        std::cout << "Bad Request" << std::endl;
+        client.Srequest.method += c;
       }
       break;
     case STATE_URI:
       if (c == ' ') {
-        validURI(Srequest.uri);
-        Srequest.stateRequestLine = SECOND_SPACE;
+        if (client.Srequest.uri[0] != '/' || !isValidURI(client.Srequest.uri)) {
+          client.Srequest.error_status = 404; // Not Found
+          client.set_request_status(Failed);
+          std::cout << "Not Found" << std::endl;
+          return false;
+        } else {
+          decodeRequestURI(client);
+          std::cout << "decodeRequestURI " << client.Srequest.uri << std::endl;
+          parseURI(client);
+          client.Srequest.stateRequestLine = STATE_VERSION;
+        }
       } else {
-        Srequest.uri += c;
-      }
-      break;
-    case SECOND_SPACE:
-      if (c == ' ') {
-        Srequest.stateRequestLine = STATE_VERSION;
-      } else {
-        Srequest.error_status = 400; // Bad Request
-        Srequest.complete = true;
-        std::cout << "Bad Request" << std::endl;
+        client.Srequest.uri += c;
       }
       break;
     case STATE_VERSION:
-      // TODO
+      if (c == '\r') {
+        if (!validHttpVersion(client.Srequest.version)) {
+          client.Srequest.error_status = 505; // HTTP Version Not Supported
+          client.set_request_status(Failed);
+          std::cout << "HTTP Version Not Supported" << std::endl;
+          return false;
+        } else {
+          client.Srequest.stateRequestLine = STATE_CRLF;
+        }
+      } else {
+        client.Srequest.version += c;
+      }
+      break;
+    case STATE_CRLF:
+      if (c == '\n') {
+        client.Srequest.state = STATE_HEADERS;
+        pos++; // Skip the '\n'
+        client.update_pos(pos);
+        client.set_request_status(Complete);
+        return true; // Successfully parsed the request line
+      } else {
+        client.Srequest.error_status = 400; // Bad Request
+        client.set_request_status(Failed);
+        std::cout << "Bad Request (Invalid CRLF)" << std::endl;
+        return false;
+      }
+      break;
+    }
+    pos++;
+    client.update_pos(pos);
+  }
+  return true;
+}
+
+void HttpRequest::parseIncrementally(HttpClient &client) {
+  size_t pos = client.get_pos();
+  std::string reqBuff = client.get_request_buffer();
+  while (pos < reqBuff.length()) {
+    switch (client.Srequest.state) {
+    case STATE_REQUEST_LINE:
+      if (!parseRequestLine(client))
+        return;
+      break;
+    case STATE_HEADERS:
+      // parseHeaders(client);
+      break;
+    case STATE_BODY:
+      // parseBody(client);
+      break;
+    case STATE_CHUNK_SIZE:
+      // parseChunkSize(client);
+      break;
+    case STATE_CHUNK_DATA:
+      // parseChunkData(client);
+      break;
+    case STATE_CHUNK_END:
+      // parseChunkEnd(client);
+      break;
+    default:
+      break;
     }
     pos++;
   }
 }
 
-void HttpRequest::parseIncrementally(std::string &reqBuff) {
-  size_t pos = 0;
-  while (pos < reqBuff.length()) {
-
-    switch (Srequest.state) {
-    case STATE_REQUEST_LINE:
-      parseRequestLine(reqBuff);
-      break;
-    case STATE_HEADERS:
-      parseHeaders(reqBuff);
-      break;
-    case STATE_BODY:
-      parseBody(reqBuff);
-      break;
-    case STATE_CHUNK_SIZE:
-      parseChunkSize(reqBuff);
-      break;
-    case STATE_CHUNK_DATA:
-      parseChunkData(reqBuff);
-      break;
-    case STATE_CHUNK_END:
-      parseChunkEnd(reqBuff);
-      break;
-    default:
-      break;
-    }
-  }
+void HttpRequest::printRequestLine(HttpClient &client) {
+  std::cout << "Method: " << client.Srequest.method << std::endl;
+  std::cout << "URI: " << client.Srequest.uri << std::endl;
+  std::cout << "Path: " << client.Srequest.path << std::endl;
+  std::cout << "Version: " << client.Srequest.version << std::endl;
+  std::cout << "Query: " << client.Srequest.query << std::endl;
+  std::cout << "Fragment: " << client.Srequest.fragment << std::endl;
 }
