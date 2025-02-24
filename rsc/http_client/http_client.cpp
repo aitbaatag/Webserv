@@ -1,11 +1,9 @@
 
 #include "../../Includes/http_client/http_client.hpp"
 
-HttpClient::HttpClient(int socket_fd) {
+HttpClient::HttpClient(int socket_fd) : SMrequest() {
   socket_fd_ = socket_fd;
   pos_ = 0;
-  Srequest.stateRequestLine = STATE_METHOD;
-  Srequest.state = STATE_REQUEST_LINE;
   request_status_ = InProgress;
   response_status_ = InProgress;
 }

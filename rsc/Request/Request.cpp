@@ -1,16 +1,11 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <string>
 HttpRequest::HttpRequest() {}
 bool HttpRequest::parseRequestLine(HttpClient &client) {
   std::string reqBuff = client.get_request_buffer();
   size_t pos = client.get_pos();
   while (pos < reqBuff.length()) {
     char c = reqBuff[pos];
-    switch (client.Srequest.stateRequestLine) {
+    switch (client.SMrequest.stateRequestLine) {
     case STATE_METHOD:
       if (c == ' ') {
         if (!validMethod(client, client.Srequest.method)) {
@@ -19,7 +14,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
           std::cout << "Method Not Allowed" << std::endl;
           return false;
         }
-        client.Srequest.stateRequestLine = STATE_URI;
+        client.SMrequest.stateRequestLine = STATE_URI;
       } else {
         client.Srequest.method += c;
       }
@@ -35,7 +30,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
           decodeRequestURI(client);
           std::cout << "decodeRequestURI " << client.Srequest.uri << std::endl;
           parseURI(client);
-          client.Srequest.stateRequestLine = STATE_VERSION;
+          client.SMrequest.stateRequestLine = STATE_VERSION;
         }
       } else {
         client.Srequest.uri += c;
@@ -49,7 +44,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
           std::cout << "HTTP Version Not Supported" << std::endl;
           return false;
         } else {
-          client.Srequest.stateRequestLine = STATE_CRLF;
+          client.SMrequest.stateRequestLine = STATE_CRLF;
         }
       } else {
         client.Srequest.version += c;
@@ -57,7 +52,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
       break;
     case STATE_CRLF:
       if (c == '\n') {
-        client.Srequest.state = STATE_HEADERS;
+        client.SMrequest.state = STATE_HEADERS;
         pos++; // Skip the '\n'
         client.update_pos(pos);
         client.set_request_status(Complete);
@@ -80,13 +75,14 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
   size_t pos = client.get_pos();
   std::string reqBuff = client.get_request_buffer();
   while (pos < reqBuff.length()) {
-    switch (client.Srequest.state) {
+    switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
       if (!parseRequestLine(client))
         return;
       break;
     case STATE_HEADERS:
-      // parseHeaders(client);
+      if (!parseHeaders(client))
+        return;
       break;
     case STATE_BODY:
       // parseBody(client);

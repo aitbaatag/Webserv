@@ -29,4 +29,9 @@ int main() {
   client2.request_buffer_ += "Host: localhost:8081\r\n";
   req.parseIncrementally(client2);
   req.printRequestLine(client2);
+
+  // print map
+  for (auto const &[key, value] : client2.Srequest.headers) {
+    std::cout << "{" << key << ": " << value << "}\n";
+  }
 }
