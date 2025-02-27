@@ -172,28 +172,35 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       }
       break;
     case STATE_STRUCUTRE_FIELD:
-      if (!ParseStructuredField(client))
+      if (!ParseStructuredField(client)) {
+        client.SMrequest.stateHeaders = STATE_ERROR;
         return false;
+      }
       pos = client.get_pos();
       continue;
     case STATE_HEADER_VALUE:
       if (c == '\r') {
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
-      } else if ((c > 32 && c < 127) ||
-                 (c == ' ' && client.Srequest.field_body[pos - 1] != ':')) {
+      } else if (c >= 32 && c < 127) {
         client.SMrequest.stateHeaders = STATE_HEADER_VALUE;
         client.Srequest.field_body += c;
       } else {
         client.SMrequest.stateHeaders = STATE_ERROR;
       }
       break;
-    case STATE_COLON:
-      if (c == ' ') {
+    case STATE_SPACE:
+      if (c > 32 && c < 127) {
         if (isStrucutredField(client.Srequest.field_name)) {
           client.SMrequest.stateHeaders = STATE_STRUCUTRE_FIELD;
-        } else {
+        } else
           client.SMrequest.stateHeaders = STATE_HEADER_VALUE;
-        }
+      } else {
+        client.SMrequest.stateHeaders = STATE_ERROR;
+      }
+      continue;
+    case STATE_COLON:
+      if (c == ' ') {
+        client.SMrequest.stateHeaders = STATE_SPACE;
       } else {
         client.SMrequest.stateHeaders = STATE_ERROR;
       }
@@ -204,10 +211,28 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
             client.Srequest.field_body;
         client.Srequest.field_name.clear();
         client.Srequest.field_body.clear();
-        client.SMrequest.stateHeaders = STATE_HEADER_NAME;
+        client.SMrequest.stateHeaders = STATE_HEADER_DELIMITER;
       } else {
         client.SMrequest.stateHeaders = STATE_ERROR;
       }
+      break;
+    case STATE_HEADER_DELIMITER:
+      if (c == '\r') {
+        client.SMrequest.stateHeaders = STATE_HEADER_DELIMITER2;
+        break;
+      } else
+        client.SMrequest.stateHeaders = STATE_HEADER_NAME;
+      continue;
+    case STATE_HEADER_DELIMITER2:
+      if (c == '\n') {
+        client.SMrequest.state = STATE_BODY;
+        // TEST
+        client.set_request_status(Complete);
+        pos++;
+        client.update_pos(pos);
+        return true;
+      } else
+        client.SMrequest.stateHeaders = STATE_ERROR;
       break;
     case STATE_ERROR:
       client.Srequest.field_name.clear();
