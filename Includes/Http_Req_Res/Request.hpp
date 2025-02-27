@@ -3,6 +3,9 @@
 
 #include "../http_client/http_client.hpp"
 #include <string>
+// for trim function
+#include <algorithm>
+#include <cctype>
 #define CRLF "\r\n"
 #define CRLFCRLF "\r\n\r\n"
 #define GET "GET"

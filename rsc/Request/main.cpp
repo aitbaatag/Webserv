@@ -25,7 +25,9 @@ void processEpollEvents(int ready_fd_count, struct epoll_event *events,
     {
       if (events[i].events & EPOLLIN) {
         // Handle req side
-        // req.parseIncrementally(clients[events[i].data.fd]);
+        //        std::cout << clients[events[i].data.fd].request_buffer_ <<
+        //        std::endl;
+        req.parseIncrementally(clients[events[i].data.fd]);
         clients[events[i].data.fd].append_to_request();
       }
       if ((events[i].events & EPOLLOUT) &&
