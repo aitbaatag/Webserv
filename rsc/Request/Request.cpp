@@ -1,4 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
+#include <iostream>
 HttpRequest::HttpRequest() {}
 bool HttpRequest::parseRequestLine(HttpClient &client) {
   std::string reqBuff = client.get_request_buffer();
@@ -54,7 +55,6 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
         client.SMrequest.state = STATE_HEADERS;
         pos++; // Skip the '\n'
         client.update_pos(pos);
-        client.set_request_status(Complete);
         return true; // Successfully parsed the request line
       } else {
         client.Srequest.error_status = 400; // Bad Request
@@ -73,38 +73,42 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
 void HttpRequest::parseIncrementally(HttpClient &client) {
   size_t pos = client.get_pos();
   std::string reqBuff = client.get_request_buffer();
-  switch (client.SMrequest.state) {
-  case STATE_REQUEST_LINE:
-    if (!parseRequestLine(client))
-      return;
-    break;
-  case STATE_HEADERS:
-    if (!parseHeaders(client))
-      return;
-    break;
-  case STATE_BODY:
-    // parseBody(client);
-    break;
-  case STATE_CHUNK_SIZE:
-    // parseChunkSize(client);
-    break;
-  case STATE_CHUNK_DATA:
-    // parseChunkData(client);
-    break;
-  case STATE_CHUNK_END:
-    // parseChunkEnd(client);
-    break;
-  default:
-    break;
+  while (client.get_pos() < reqBuff.length()) {
+    switch (client.SMrequest.state) {
+    case STATE_REQUEST_LINE:
+      if (!parseRequestLine(client))
+        return;
+      break;
+    case STATE_HEADERS:
+      if (!parseHeaders(client))
+        return;
+      break;
+    case STATE_BODY:
+      // parseBody(client);
+      break;
+    case STATE_CHUNK_SIZE:
+      // parseChunkSize(client);
+      break;
+    case STATE_CHUNK_DATA:
+      // parseChunkData(client);
+      break;
+    case STATE_CHUNK_END:
+      // parseChunkEnd(client);
+      break;
+    default:
+      break;
+    }
   }
-  pos++;
 }
 
-// void HttpRequest::printRequestLine(HttpClient &client) {
-//   std::cout << "Method: " << client.Srequest.method << std::endl;
-//   std::cout << "URI: " << client.Srequest.uri << std::endl;
-//   std::cout << "Path: " << client.Srequest.path << std::endl;
-//   std::cout << "Version: " << client.Srequest.version << std::endl;
-//   std::cout << "Query: " << client.Srequest.query << std::endl;
-//   std::cout << "Fragment: " << client.Srequest.fragment << std::endl;
-// }
+void HttpRequest::printRequestLine(HttpClient &client) {
+  std::cout << "Method: " << client.Srequest.method << std::endl;
+  std::cout << "URI: " << client.Srequest.uri << std::endl;
+  std::cout << "Path: " << client.Srequest.path << std::endl;
+  // std::cout << "Version: " << client.Srequest.version << std::endl;
+  // std::cout << "Query: " << client.Srequest.query << std::endl;
+  // std::cout << "Fragment: " << client.Srequest.fragment << std::endl;
+  // for (auto const &[key, value] : client.Srequest.headers) {
+  //   std::cout << "{" << key << ": " << value << "}\n";
+  // }
+}

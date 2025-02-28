@@ -17,6 +17,12 @@ void Response::setStatus(int code) {
     else if (code == 405) {
         _status = "405 Method Not Allowed";
     }
+    else if (code == 415) {
+        _status = "415 Unsupported Media Type";
+    }
+    else if (code == 505) {
+        _status = "505 HTTP Version Not Supported";
+    }
     else {
         _status = "400 Bad Request";
     }
@@ -52,7 +58,7 @@ void Response::setHeaders() {
 }
 
 void Response::setBody() {
-    std::ifstream file(_filePath.c_str(), std::ios::in | std::ios::binary);  // Open file in binary mode
+    std::ifstream file(_filePath.c_str(), std::ios::in | std::ios::binary);
     if (file.is_open()) {
         std::ostringstream oss;
         oss << file.rdbuf();  // Read file into a stringstream
@@ -61,44 +67,72 @@ void Response::setBody() {
     }
     else {
         setStatus(404);
-        _filePath = "www/errors/404.html"; // Serve the custom 404 page
-        setBody(); // Load the error page content
+        _filePath = "www/errors/404.html";
+        setBody();
     }
 }
 
 
 void Response::handleFileRequest() {
     struct stat fileStat;
+    if (_filePath.find(".") == std::string::npos) {
+        _filePath += ".html";
+    }
     if (stat(_filePath.c_str(), &fileStat) == 0) {
         setStatus(200);
         setBody();
     }
     else {
         setStatus(404);
-        _filePath = "www/404.html"; // Serve the custom 404 page
-        setBody(); // Load the error page content
+        _filePath = "www/404.html";
+        setBody();
     }
 }
 
-std::string Response::generateResponse(HttpClient &client) {
-    if (client.Srequest.method == "GET") {
-        std::cout << "GET request received" << std::endl;
-        std::cout << "Path: " << client.Srequest.path << std::endl;
-        if (client.Srequest.path == "/") {
-            _filePath = "www/index.html";
+void Response::generateResponse(HttpClient &client, int fd) {
+    if (client.Srequest.error_status == 0) {
+        if (client.Srequest.method == "GET") {
+            std::cout << "GET request received" << std::endl;
+            if (client.Srequest.path == "/") {
+                _filePath = "www/index.html";
+            }
+            else {
+                _filePath = "www" + client.Srequest.path;
+            }
+            handleFileRequest();
         }
-        else {
-            _filePath = "www" + client.Srequest.path;
-        }
-        handleFileRequest();
+        // else if (client.Srequest.method == "POST") {
+        //     std::cout << "POST request received" << std::endl;
+        //     if (client.Srequest.path == "/") {
+        //         _filePath = "www/index.html";
+        //     }
+        //     else {
+        //         _filePath = "www" + client.Srequest.path;
+        //     }
+        //     handleFileRequest();
+        // }
+        // else if (client.Srequest.method == "DELETE") {
+        //     std::cout << "DELETE request received" << std::endl;
+        //     setStatus(405);
+        //     _filePath = "www/www/405.html";
+        //     setBody();
+        // }
     }
     else {
-        setStatus(405);
-        _body = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
+        setStatus(client.Srequest.error_status);
     }
 
     setHeaders();
 
     std::string fullResponse = "HTTP/1.1 " + _status + "\r\n" + _headers + _body;
-    return fullResponse;
+
+    ssize_t bytes_sent = send(fd, fullResponse.c_str(), fullResponse.size(), 0);
+    
+    if (bytes_sent < 0) {
+        std::cerr << "Error sending response to client FD " << fd << std::endl;
+    }
+    else {
+        std::cout << "Sent response to client FD " << fd << std::endl;
+        client.set_response_status(Complete);
+    }
 }

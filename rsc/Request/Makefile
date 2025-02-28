@@ -1,10 +1,9 @@
 CC = c++ -g
-SRC = main.cpp ../../rsc/http_client/http_client.cpp server_socket.cpp Request.cpp RequestUtils.cpp StateMachine.cpp ParseHeader.cpp
+SRC = main.cpp ../../rsc/http_client/http_client.cpp server_socket.cpp Request.cpp RequestUtils.cpp StateMachine.cpp ParseHeader.cpp 
 OBJ = $(SRC:.cpp=.o)
 TARGET = webserver
 TARGET2 = test2
-CFLAGS = 
-
+CFLAGS = -std=c++17
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
@@ -20,3 +19,5 @@ fclean: clean
 
 run: all
 	./$(TARGET)
+
+.PHONY: all clean fclean run

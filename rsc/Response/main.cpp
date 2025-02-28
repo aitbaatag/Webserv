@@ -38,28 +38,16 @@ void processEpollEvents(int ready_fd_count, struct epoll_event *events,
 
   for (int i = 0; i < ready_fd_count; ++i) {
     {
-    int client_fd = events[i].data.fd;
-
-      if (events[i].events & EPOLLIN) {
-        // Handle req side
-        //        std::cout << clients[events[i].data.fd].request_buffer_ <<
-        //        std::endl;
-        req.parseIncrementally(clients[events[i].data.fd]);
+      if ((events[i].events & EPOLLIN) && clients[events[i].data.fd].get_request_status() == InProgress) {
         clients[events[i].data.fd].append_to_request();
-      }
-      if ((events[i].events & EPOLLOUT) && clients[events[i].data.fd].get_request_status() == Complete) {
-        std::string response = res.generateResponse(clients[events[i].data.fd]);
-        // Send response to the client
-      ssize_t bytes_sent = send(client_fd, response.c_str(), response.size(), 0);
-      if (bytes_sent < 0) {
-        std::cerr << "Error sending response to client FD " << client_fd << std::endl;
-      } else {
-        std::cout << "Sent response to client FD " << client_fd << std::endl;
+        req.parseIncrementally(clients[events[i].data.fd]);
       }
 
-      // Close connection after response is sent
-      close(client_fd);
-      clients.erase(client_fd);
+      if ((events[i].events & EPOLLOUT) && clients[events[i].data.fd].get_request_status() == Complete) {
+        res.generateResponse(clients[events[i].data.fd], events[i].data.fd);
+        close(events[i].data.fd);
+        clients.erase(events[i].data.fd);
+        std::cout << "Closed connection: client FD " << events[i].data.fd << std::endl;
       }
     }
   }

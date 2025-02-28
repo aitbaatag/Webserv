@@ -1,6 +1,7 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include "../../Includes/http_client/http_client.hpp"
 #include "server_socket.hpp"
+#include <iostream>
 #include <sys/epoll.h>
 
 void handleNewConnection(int client_fd, int epfd,
@@ -23,17 +24,19 @@ void processEpollEvents(int ready_fd_count, struct epoll_event *events,
 
   for (int i = 0; i < ready_fd_count; ++i) {
     {
-      if (events[i].events & EPOLLIN) {
+      if ((events[i].events & EPOLLIN)) {
         // Handle req side
-        //        std::cout << clients[events[i].data.fd].request_buffer_ <<
-        //        std::endl;
+        std::cout << "satrted parsing" << std::endl;
         req.parseIncrementally(clients[events[i].data.fd]);
         clients[events[i].data.fd].append_to_request();
       }
       if ((events[i].events & EPOLLOUT) &&
           clients[events[i].data.fd].get_request_status() == Complete) {
-        // req.printRequestLine(clients[events[i].data.fd]);
+            std::cout << "satrted parsing ----------------------------" << std::endl;
+        req.printRequestLine(clients[events[i].data.fd]);
+       close (events[i].data.fd);
         // Handle writable events
+        //exit (0);
       }
     }
   }
