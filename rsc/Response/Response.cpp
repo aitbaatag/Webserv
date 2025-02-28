@@ -67,7 +67,7 @@ void Response::setBody() {
     }
     else {
         setStatus(404);
-        _filePath = "www/errors/404.html";
+        _filePath = "www/404.html";
         setBody();
     }
 }
@@ -101,16 +101,12 @@ void Response::generateResponse(HttpClient &client, int fd) {
             }
             handleFileRequest();
         }
-        // else if (client.Srequest.method == "POST") {
-        //     std::cout << "POST request received" << std::endl;
-        //     if (client.Srequest.path == "/") {
-        //         _filePath = "www/index.html";
-        //     }
-        //     else {
-        //         _filePath = "www" + client.Srequest.path;
-        //     }
-        //     handleFileRequest();
-        // }
+        else if (client.Srequest.method == "POST") {
+            std::cout << "POST request received" << std::endl;
+
+            _filePath = "www" + client.Srequest.path;
+            handleFileRequest();
+        }
         // else if (client.Srequest.method == "DELETE") {
         //     std::cout << "DELETE request received" << std::endl;
         //     setStatus(405);

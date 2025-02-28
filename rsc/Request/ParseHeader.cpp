@@ -47,6 +47,7 @@ bool HttpRequest::ParseContent_Type(HttpClient &client) {
       client.Srequest.charset = value;
     else if (key == "boundary") {
       client.Srequest.boundary = value;
+    std::cout << "boundary: " << client.Srequest.boundary << std::endl;
     } else
       content_type_params[key] = value;
   }

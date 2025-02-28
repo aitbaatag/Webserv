@@ -91,6 +91,40 @@
             animation: moveParticle 15s linear infinite;
         }
 
+        /* Form Styling */
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .form-group label {
+            font-size: 16px;
+            color: #333;
+        }
+
+        .form-group button {
+            width: 100%;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -122,10 +156,37 @@
     <div class="particles" id="particles"></div>
     <div class="container">
         <div class="explore-icon">🌍</div>
-        <div class="title">Home page</div>
+        <div class="title">Login & File Upload</div>
         <p class="subtitle">
             Mr7ba bikom a chabab libgha chi haja idoz l khass 0612458934.
         </p>
+
+        <!-- Form to handle POST request -->
+        <form action="/submit" method="POST" enctype="multipart/form-data">
+            <!-- Username Input -->
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <!-- Password Input -->
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <!-- File Upload -->
+            <div class="form-group">
+                <label for="file">Upload File:</label>
+                <input type="file" id="file" name="file" required>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-group">
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+
         <a href="/" class="button">Go Back</a>
     </div>
 
