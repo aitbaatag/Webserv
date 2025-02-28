@@ -103,13 +103,13 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
 }
 
 void HttpRequest::printRequestLine(HttpClient &client) {
-  // std::cout << "Method: " << client.Srequest.method << std::endl;
-  // std::cout << "URI: " << client.Srequest.uri << std::endl;
-  // std::cout << "Path: " << client.Srequest.path << std::endl;
-  // std::cout << "Version: " << client.Srequest.version << std::endl;
-  // std::cout << "Query: " << client.Srequest.query << std::endl;
-  // std::cout << "Fragment: " << client.Srequest.fragment << std::endl;
-  for (auto const &[key, value] : client.Srequest.headers) {
-    std::cout << "{" << key << ": " << value << "}\n";
-  }
+  std::cout << "Method: " << client.Srequest.method << std::endl;
+  std::cout << "URI: " << client.Srequest.uri << std::endl;
+  std::cout << "Path: " << client.Srequest.path << std::endl;
+  std::cout << "Version: " << client.Srequest.version << std::endl;
+  std::cout << "Query: " << client.Srequest.query << std::endl;
+  std::cout << "Fragment: " << client.Srequest.fragment << std::endl;
+  // for (auto const &[key, value] : client.Srequest.headers) {
+  //   std::cout << "{" << key << ": " << value << "}\n";
+  // }
 }
