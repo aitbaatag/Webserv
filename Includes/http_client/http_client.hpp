@@ -37,7 +37,7 @@ struct Request {
   std::string boundary;
   std::string charset;
   std::string Content_Type;
-  int error_status; // the error status of the request
+  int error_status = 0; // the error status of the request
 };
 class HttpClient {
 public:
@@ -62,6 +62,7 @@ public:
   int get_pos() const;
   std::string get_request_buffer() const;
   void set_request_status(Status status);
+  void set_response_status(Status status);
 };
 
 #endif

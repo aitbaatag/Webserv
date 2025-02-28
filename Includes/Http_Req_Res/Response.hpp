@@ -30,7 +30,7 @@ class Response {
         Response();
         ~Response();
 
-    std::string generateResponse(HttpClient &client);
+    void generateResponse(HttpClient &client, int fd);
 };
 
 #endif
