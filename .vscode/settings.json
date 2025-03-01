@@ -1,6 +1,7 @@
 {
 	"files.associations": {
-		"iostream": "cpp",
+		"iosfwd": "cpp",
+		"fstream": "cpp",
 		"any": "cpp",
 		"array": "cpp",
 		"atomic": "cpp",
@@ -27,6 +28,7 @@
 		"deque": "cpp",
 		"list": "cpp",
 		"map": "cpp",
+		"set": "cpp",
 		"string": "cpp",
 		"unordered_map": "cpp",
 		"vector": "cpp",
@@ -46,10 +48,9 @@
 		"type_traits": "cpp",
 		"utility": "cpp",
 		"format": "cpp",
-		"fstream": "cpp",
 		"initializer_list": "cpp",
 		"iomanip": "cpp",
-		"iosfwd": "cpp",
+		"iostream": "cpp",
 		"istream": "cpp",
 		"limits": "cpp",
 		"mutex": "cpp",
@@ -68,6 +69,7 @@
 		"cinttypes": "cpp",
 		"typeinfo": "cpp",
 		"valarray": "cpp",
-		"variant": "cpp"
+		"variant": "cpp",
+		"test1": "cpp"
 	}
 }
