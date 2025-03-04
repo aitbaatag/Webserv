@@ -93,9 +93,9 @@ ServerConfigParser::~ServerConfigParser() {
 void ServerConfigParser::parseServer(std::vector<std::string> &lineTokens, std::size_t &idx)
 {
 	insideServerBlock_ = true;
-	
 	if (lineTokens.size() > 1 && lineTokens[idx + 1] != "{")
 		throw std::runtime_error("Syntax Error: 'server' block must start with '{'.");
+	servers_.push_back(Server());
 }
 
 void ServerConfigParser::parseListen(std::vector<std::string > &lineTokens, std::size_t &idx)
@@ -116,6 +116,12 @@ void ServerConfigParser::parseListen(std::vector<std::string > &lineTokens, std:
 		throw std::runtime_error("Syntax Error: Invalid port: 'listen' Must be in range 1-65535.");
 	if (lineTokens[idx + 2] != ";")
 		throw std::runtime_error("Syntax Error: 'listen' Missing ';' after port number.");
+
+	Server& current_server = servers_.back();
+	if (current_server.Tracker.has_port == true)
+		throw std::runtime_error("Syntax Error: Multiple 'listen' directives detected in configuration");
+	current_server.port = port;
+	current_server.Tracker.has_port = true;
 	idx += 2;
 }
 
@@ -124,12 +130,18 @@ void  ServerConfigParser::parseHost(std::vector<std::string> &lineTokens, std::s
 	if (idx + 2 >= lineTokens.size())
 		throw std::runtime_error("Syntax Error: 'host' directive requires value and semicolon");
 	
+		std::string current_host = lineTokens[idx + 1];
 	if (lineTokens[idx + 1] != "localhost" && lineTokens[idx + 1] != "127.0.0.1" && lineTokens[idx + 1] != "0.0.0.0" )
 		throw std::runtime_error("Syntax Error: Invalid host value: 'host' - must be 'localhost', '127.0.0.1', or '0.0.0.0'");
 
 	if (lineTokens[idx + 2] != ";")
-		throw std::runtime_error("Syntax Error: 'host' Missing ';' after Host type.");
+		throw std::runtime_error("Syntax Error: 'host' Missing ';' after Host type.");	
 
+	Server& current_server = servers_.back();
+	if (current_server.Tracker.has_host == true)
+		throw std::runtime_error("Syntax Error: Multiple 'host' directives detected in configuration");
+	current_server.host = current_host;
+	current_server.Tracker.has_host = true;
 	idx += 2;
 }
 
@@ -182,10 +194,14 @@ void ServerConfigParser::parseServerName(std::vector<std::string > &lineTokens, 
 		server_names.push_back(host);
 		idx++;
 	}
-	
-
 	if (idx >= lineTokens.size() || lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: Missing ';' in server_name");
+	
+	Server& current_server = servers_.back();
+	if (!current_server.server_names.empty())
+		throw std::runtime_error("Syntax Error: Multiple 'server_name' directives detected in configuration");
+	for (int i = 0; i < server_names.size(); i++)
+		current_server.server_names.push_back(server_names[i]);
 }
 
 
@@ -216,6 +232,12 @@ void ServerConfigParser::parseMaxBodySize(std::vector<std::string > &lineTokens,
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: Missing ';' in 'max_body_size' directive.");
+	
+	Server& current_server = servers_.back();
+	if (current_server.Tracker.has_max_body_size == true)
+		throw std::runtime_error("Syntax Error: Multiple 'max_body_size' directives detected in configuration");
+	current_server.max_body_size = value;
+	current_server.Tracker.has_max_body_size = true;
 }
 
 
@@ -254,7 +276,6 @@ void ServerConfigParser::parseErrorPage(std::vector<std::string > &lineTokens, s
 
 void ServerConfigParser::parseRoute(std::vector<std::string > &lineTokens, std::size_t &idx)
 {
-	// Servers.push_back({});
 	insideRouteBlock_ = true;
 	idx++;
 
@@ -275,6 +296,8 @@ void ServerConfigParser::parseRoute(std::vector<std::string > &lineTokens, std::
 				throw std::runtime_error("Syntax Error: 'route' Only alphabetic characters allowed between slashes");
 		}
 	}
+	servers_.back().routes.push_back(Route());
+	servers_.back().routes.back().path = route;
 }
 
 void ServerConfigParser::parseMethods(std::vector<std::string> &lineTokens, std::size_t &idx)
@@ -322,6 +345,13 @@ void ServerConfigParser::parseMethods(std::vector<std::string> &lineTokens, std:
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'methods' directive must end with a semicolon");
 
+	
+	
+	Route &current_route = servers_.back().routes.back();
+	if (!current_route.accepted_methods.empty())
+		throw std::runtime_error("Syntax Error: Multiple 'methods' directives detected in configuration");
+	for (int i = 0; i < Methods.size(); i++)
+		current_route.accepted_methods.push_back(Methods[i]);
 }
 
 void ServerConfigParser::parseRoot(std::vector<std::string > &lineTokens, std::size_t &idx)
@@ -342,7 +372,11 @@ void ServerConfigParser::parseRoot(std::vector<std::string > &lineTokens, std::s
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'root' directive must end with a semicolon");
-
+	Route &current_route = servers_.back().routes.back();
+	if (current_route.Tracker.has_root_dir == true)
+		throw std::runtime_error("Syntax Error: Multiple 'root' directives detected in configuration");
+	current_route.root_dir = path;
+	current_route.Tracker.has_root_dir = true;
 }
 
 void ServerConfigParser::parseDirectoryListing(std::vector<std::string > &lineTokens, std::size_t &idx)
@@ -355,6 +389,14 @@ void ServerConfigParser::parseDirectoryListing(std::vector<std::string > &lineTo
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'DirectoryListing' directive must end with a semicolon");
+	Route &current_route = servers_.back().routes.back();
+	if (current_route.Tracker.has_directory_listing == true)
+		throw std::runtime_error("Syntax Error: Multiple 'has_directory_listing' directives detected in configuration");
+	if (lineTokens[idx - 1] == "on")
+		current_route.directory_listing = true;
+	else
+		current_route.directory_listing = false;
+	current_route.Tracker.has_root_dir = true;
 }
 
 void ServerConfigParser::parseDefaultFile(std::vector<std::string> &lineTokens, std::size_t &idx)
@@ -372,6 +414,11 @@ void ServerConfigParser::parseDefaultFile(std::vector<std::string> &lineTokens, 
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'default_file' directive must end with a semicolon");
+	Route &current_route = servers_.back().routes.back();
+	if (current_route.Tracker.has_default_file == true)
+		throw std::runtime_error("Syntax Error: Multiple 'default_file' directives detected in configuration");
+	current_route.default_file = lineTokens[idx - 1];
+	current_route.Tracker.has_default_file = true;
 }
 
 void ServerConfigParser::parseCgi(std::vector<std::string> &lineTokens, std::size_t &idx)
@@ -389,6 +436,11 @@ void ServerConfigParser::parseCgi(std::vector<std::string> &lineTokens, std::siz
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'cgi' directive must end with a semicolon");
+	Route &current_route = servers_.back().routes.back();
+	if (current_route.Tracker.has_cgi_extension == true)
+		throw std::runtime_error("Syntax Error: Multiple 'cgi' directives detected in configuration");
+	current_route.cgi_extension = path;
+	current_route.Tracker.has_cgi_extension = true;
 }
 
 void ServerConfigParser::parseUploadDir(std::vector<std::string > &lineTokens, std::size_t &idx)
@@ -406,6 +458,11 @@ void ServerConfigParser::parseUploadDir(std::vector<std::string > &lineTokens, s
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'upload_directory' directive must end with a semicolon");
+	Route &current_route = servers_.back().routes.back();
+	if (current_route.Tracker.has_upload_dir == true)
+		throw std::runtime_error("Syntax Error: Multiple 'upload_directory' directives detected in configuration");
+	current_route.upload_dir = path;
+	current_route.Tracker.has_upload_dir = true;
 }
 
 void ServerConfigParser::parseDirective(std::vector<std::string > &lineTokens)
@@ -544,11 +601,90 @@ void ServerConfigParser::parseConfigFile(int argc, char* argv[])
 	{
 		loadConfigFile(argc, argv);
 		parseConfigLine();
+		printServers();
 	}
 	catch(const std::exception& e)
 	{
 		std::cerr << e.what() << '\n';
 	}
+}
+// ----------------------------------- TRACK DIRECTIVE ------------------------ //
+
+RouteFoundDirective::RouteFoundDirective() : has_path(false),
+has_redirect(false),
+has_root_dir(false),
+has_directory_listing(false),
+has_default_file(false),
+has_cgi_extension(false),
+has_upload_dir(false) 
+{}
+
+ServerFoundDirective::ServerFoundDirective() : has_port(false),
+has_host(false),
+has_is_default(false),
+has_max_body_size(false) 
+{}
+
+// Beautiful printer implementation
+void ServerConfigParser::printServers() const {
+  if (servers_.empty()) {
+    std::cout << "No servers configured." << std::endl;
+    return;
+  }
+
+  std::cout << "=== Server Configuration ===" << std::endl;
+  for (std::vector < Server > ::size_type i = 0; i < servers_.size(); ++i) {
+    const Server & server = servers_[i];
+
+    std::cout << "Server #" << (i + 1) << ":" << std::endl;
+    std::cout << "  Port: " << server.port << std::endl;
+    std::cout << "  Host: " << server.host << std::endl;
+    std::cout << "  Server Names: ";
+    if (server.server_names.empty()) {
+      std::cout << "(none)";
+    } else {
+      for (std::vector < std::string > ::size_type j = 0; j < server.server_names.size(); ++j) {
+        std::cout << server.server_names[j];
+        if (j < server.server_names.size() - 1) std::cout << ", ";
+      }
+    }
+    std::cout << std::endl;
+    std::cout << "  Is Default: " << (server.is_default ? "Yes" : "No") << std::endl;
+    std::cout << "  Max Body Size: " << server.max_body_size << " bytes" << std::endl;
+    std::cout << "  Error Pages:" << std::endl;
+    for (std::map < std::string, std::string > ::const_iterator it = server.error_page.begin(); it != server.error_page.end(); ++it) {
+      std::cout << "    " << it -> first << " -> " << it -> second << std::endl;
+    }
+
+    std::cout << "  Routes (" << server.routes.size() << "):" << std::endl;
+    if (server.routes.empty()) {
+      std::cout << "    (none)" << std::endl;
+    } else {
+      for (std::vector < Route > ::size_type j = 0; j < server.routes.size(); ++j) {
+        const Route & route = server.routes[j];
+        std::cout << "    Route #" << (j + 1) << ":" << std::endl;
+        std::cout << "      Path: " << route.path << std::endl;
+        std::cout << "      Redirect: " << (route.redirect.empty() ? "(none)" : route.redirect) << std::endl;
+        std::cout << "      Root Dir: " << (route.root_dir.empty() ? "(none)" : route.root_dir) << std::endl;
+        std::cout << "      Directory Listing: " << (route.directory_listing ? "Enabled" : "Disabled") << std::endl;
+        std::cout << "      Default File: " << route.default_file << std::endl;
+        std::cout << "      CGI Extension: " << (route.cgi_extension.empty() ? "(none)" : route.cgi_extension) << std::endl;
+        std::cout << "      Upload Dir: " << (route.upload_dir.empty() ? "(none)" : route.upload_dir) << std::endl;
+        std::cout << "      Accepted Methods: ";
+        if (route.accepted_methods.empty()) {
+          std::cout << "(none)";
+        } else {
+          for (std::vector < std::string > ::size_type k = 0; k < route.accepted_methods.size(); ++k) {
+            std::cout << route.accepted_methods[k];
+            if (k < route.accepted_methods.size() - 1) std::cout << ", ";
+          }
+        }
+        std::cout << std::endl;
+      }
+    }
+    std::cout << "------------------------" << std::endl;
+  }
+  std::cout << "=== End of Configuration ===" << std::endl;
 }
 
 // ----------------------------------- SET DEFAULT  PARAMETER  --------------------------------- //
@@ -567,9 +703,9 @@ Route::Route()
 
 Server::Server()
 {
-	port = 0;
-	host = "0.0.0.0";
-	// Empty server_name means accept all
+	port = -1; // done
+	host = "default"; //done
+	// Empty server_name means accept all //done
 	is_default = false;
 	error_page["404"] = "/default/path";
 	error_page["500"] = "/default/path";

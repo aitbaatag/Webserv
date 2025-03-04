@@ -28,6 +28,28 @@ enum LogLevel {
 	DEBUG
 };
 
+// Track the server 
+struct ServerFoundDirective {
+	bool has_port;
+	bool has_host;
+	bool has_is_default;
+	bool has_max_body_size;
+	ServerFoundDirective();
+};
+
+// Track the route
+struct RouteFoundDirective {
+	bool has_path;
+	bool has_redirect;
+	bool has_root_dir;
+	bool has_directory_listing;
+	bool has_default_file;
+	bool has_cgi_extension;
+	bool has_upload_dir;
+	RouteFoundDirective();
+};
+
+
 // Represents an HTTP route
 struct Route
 {
@@ -39,8 +61,12 @@ struct Route
 	std::string cgi_extension;
 	std::string upload_dir;
 	std::vector<std::string> accepted_methods;
+	RouteFoundDirective Tracker;
 	Route();
 };
+
+
+
 
 // Represents a server block
 struct Server
@@ -52,8 +78,13 @@ struct Server
 	std::map<std::string, std::string> error_page;
 	std::size_t max_body_size;
 	std::vector<Route> routes;
+	ServerFoundDirective Tracker;
 	Server();
 };
+
+
+
+
 
 
 class ServerConfigParser {
@@ -66,8 +97,11 @@ class ServerConfigParser {
 		bool insideServerBlock_;
 		bool insideRouteBlock_;
 		std::vector<Server> servers_;
-		Server current_server_;
-		Route current_route_;
+
+		// std::size_t current_server_;
+		// std::vector <Route> router_;
+		// Server &current_server_;
+		// Route &current_route_;
 	public:
 		
 		// contructor & deconstructor & public func
@@ -101,6 +135,8 @@ class ServerConfigParser {
 		void parseUploadDir(std::vector<std::string> &lineTokens, std::size_t &idx);           // Parse "upload_dir" directive @route
 		void parseRedirect(std::vector<std::string> &lineTokens, std::size_t &idx);           // Parse "upload_dir" directive @route
 
+		// Beautiful printer function
+		void printServers() const;
 };
 
 #endif

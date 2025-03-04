@@ -70,6 +70,22 @@
 		"typeinfo": "cpp",
 		"valarray": "cpp",
 		"variant": "cpp",
-		"test1": "cpp"
+		"test1": "cpp",
+		"__bit_reference": "cpp",
+		"__locale": "cpp",
+		"__node_handle": "cpp",
+		"__split_buffer": "cpp",
+		"__threading_support": "cpp",
+		"__tree": "cpp",
+		"__verbose_abort": "cpp",
+		"bitset": "cpp",
+		"ios": "cpp",
+		"locale": "cpp",
+		"print": "cpp",
+		"__hash_table": "cpp",
+		"complex": "cpp",
+		"execution": "cpp",
+		"queue": "cpp",
+		"stack": "cpp"
 	}
 }
