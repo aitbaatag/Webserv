@@ -7,6 +7,12 @@ void ServerSocket::initialize_socket(int port)
 	if (socket_fd_ < 0)
 		throw std::runtime_error("Failed to create socket: " + std::string(strerror(errno)));
 
+	int opt = 1;
+	if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+		std::cerr << "Failed to set socket options: " << strerror(errno) << std::endl;
+		close(socket_fd_);
+		return;
+	}
 	server_address_.sin_family = AF_INET;
 	server_address_.sin_port = htons(port);
 	server_address_.sin_addr.s_addr = htonl(INADDR_ANY);

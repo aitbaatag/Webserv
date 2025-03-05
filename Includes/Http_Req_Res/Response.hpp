@@ -6,10 +6,11 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <sstream>  // For building responses
+#include <sstream>
 #include <sys/types.h>  
-#include <sys/stat.h>  // For checking file existence
-#include <unistd.h>    // For access()
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "../../Includes/http_client/http_client.hpp"
 
 
