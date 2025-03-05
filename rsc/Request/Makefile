@@ -1,8 +1,7 @@
 CC = c++ -g
-SRC = main.cpp ../../rsc/http_client/http_client.cpp server_socket.cpp Request.cpp RequestUtils.cpp StateMachine.cpp ParseHeader.cpp 
+SRC = main.cpp ../../rsc/http_client/http_client.cpp server_socket.cpp Request.cpp RequestUtils.cpp StateMachine.cpp ParseHeader.cpp Response.cpp ParseBody.cpp 
 OBJ = $(SRC:.cpp=.o)
 TARGET = webserver
-TARGET2 = test2
 CFLAGS = 
 
 all: $(TARGET)
@@ -19,6 +18,6 @@ fclean: clean
 	rm -f $(TARGET)
 
 run: all
-	./$(TARGET)
+	clear; ./$(TARGET)
 
 .PHONY: all clean fclean run

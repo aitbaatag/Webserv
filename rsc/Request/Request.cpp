@@ -76,30 +76,50 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
   while (client.get_pos() < reqBuff.length()) {
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
+      std::cout << "Request Line" << std::endl;
       if (!parseRequestLine(client))
         return;
       break;
     case STATE_HEADERS:
+      std::cout << "Headers" << std::endl;
       if (!parseHeaders(client))
         return;
-      break;
-    case STATE_BODY:
-      // parseBody(client);
-      break;
-    case STATE_CHUNK_SIZE:
-      // parseChunkSize(client);
-      break;
-    case STATE_CHUNK_DATA:
-      // parseChunkData(client);
-      break;
-    case STATE_CHUNK_END:
-      // parseChunkEnd(client);
-      break;
-    default:
+    case STATE_BODY: {
+      std::cout << "Body Type" << std::endl;
+      BodyType bodyType = determineBodyType(client.Srequest.headers);
+      if (bodyType == BodyType::MULTIPART || bodyType == BodyType::CHUNKED) {
+        client.Srequest.temp_file_fd =
+            open(".temp_file", O_CREAT | O_RDWR, 0666);
+      }
+      switch (bodyType) {
+      case BodyType::NO_BODY: {
+        std::cout << "NO_BODY" << std::endl;
+        client.set_request_status(Complete);
+        break;
+      }
+      case BodyType::MULTIPART: {
+        std::cout << "MULTIPART" << std::endl;
+        if (!MultipartBody(client))
+          client.SMrequest.state = STATE_COMPLETE;
+        else
+          client.SMrequest.state = STATE_BODY;
+        break;
+      }
+      case BodyType::CHUNKED: {
+        std::cout << "CHUNKED" << std::endl;
+        if (!parseChunkedBody(client))
+          return;
+        break;
+      }
+      }
+    }
+    case STATE_COMPLETE:
+      client.set_request_status(Complete);
+      client.SMrequest.state = STATE_COMPLETE;
+      return;
       break;
     }
   }
-  client.set_request_status(Complete);
 }
 
 void HttpRequest::printRequestLine(HttpClient &client) {

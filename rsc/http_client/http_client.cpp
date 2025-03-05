@@ -47,3 +47,7 @@ int HttpClient::get_pos() const { return pos_; }
 std::string HttpClient::get_request_buffer() const { return request_buffer_; }
 
 void HttpClient::set_request_status(Status status) { request_status_ = status; }
+
+void HttpClient::set_response_status(Status status) {
+  response_status_ = status;
+}
