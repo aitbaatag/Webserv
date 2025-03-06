@@ -111,12 +111,11 @@ void ServerConfigParser::parseListen(std::vector<std::string > &lineTokens, std:
 		if (portStr[i]< '0' || portStr[i] > '9')
 			throw std::runtime_error("Syntax Error: Invalid port: 'listen' Must contain only digits.");
 	}
-	int port = std::atoi(portStr.c_str());
-	if (portStr.size() <= 6 && (port < 1 || port > 65535))
+	std::size_t port = std::atoll(portStr.c_str());
+	if (portStr.size() >= 6 || port < 1 || port > 65535)
 		throw std::runtime_error("Syntax Error: Invalid port: 'listen' Must be in range 1-65535.");
 	if (lineTokens[idx + 2] != ";")
 		throw std::runtime_error("Syntax Error: 'listen' Missing ';' after port number.");
-
 	Server& current_server = servers_.back();
 	if (current_server.Tracker.has_port == true)
 		throw std::runtime_error("Syntax Error: Multiple 'listen' directives detected in configuration");
@@ -129,18 +128,13 @@ void  ServerConfigParser::parseHost(std::vector<std::string> &lineTokens, std::s
 {
 	if (idx + 2 >= lineTokens.size())
 		throw std::runtime_error("Syntax Error: 'host' directive requires value and semicolon");
-	
-		std::string current_host = lineTokens[idx + 1];
-	if (lineTokens[idx + 1] != "localhost" && lineTokens[idx + 1] != "127.0.0.1" && lineTokens[idx + 1] != "0.0.0.0" )
-		throw std::runtime_error("Syntax Error: Invalid host value: 'host' - must be 'localhost', '127.0.0.1', or '0.0.0.0'");
-
 	if (lineTokens[idx + 2] != ";")
 		throw std::runtime_error("Syntax Error: 'host' Missing ';' after Host type.");	
 
 	Server& current_server = servers_.back();
 	if (current_server.Tracker.has_host == true)
 		throw std::runtime_error("Syntax Error: Multiple 'host' directives detected in configuration");
-	current_server.host = current_host;
+	current_server.host = lineTokens[idx + 1];
 	current_server.Tracker.has_host = true;
 	idx += 2;
 }
@@ -204,39 +198,52 @@ void ServerConfigParser::parseServerName(std::vector<std::string > &lineTokens, 
 		current_server.server_names.push_back(server_names[i]);
 }
 
-
 void ServerConfigParser::parseMaxBodySize(std::vector<std::string > &lineTokens, std::size_t &idx)
 {
+	std::size_t result ;
 	if (idx + 2 >= lineTokens.size())
 		throw std::runtime_error("Syntax Error: 'max_body_size' directive requires a value and a semicolon.");
 	idx++;
 	std::string numStr = lineTokens[idx];
-	if (numStr.length() > 10)
+	if (numStr.length() > 20)
 		throw std::runtime_error("Syntax Error: 'max_body_size' value is too large.");
-	bool hasM = false;
-	if (numStr[numStr.length() - 1] == 'm')
+	unsigned long long multiplier = 1;
+	char lastChar = numStr[numStr.length() - 1];
+
+	if (lastChar == 'm' || lastChar == 'M')
 	{
-		hasM = true;
+		multiplier = 1048576ULL;
 		numStr = numStr.substr(0, numStr.length() - 1);
 	}
+	else if (lastChar == 'k' || lastChar == 'K')
+	{
+		multiplier = 1024ULL;
+		numStr = numStr.substr(0, numStr.length() - 1);
+	}
+	else if (lastChar == 'g' || lastChar == 'G')
+	{
+		multiplier = 1073741824ULL;
+		numStr = numStr.substr(0, numStr.length() - 1);
+	}
+	if (numStr.empty())
+		throw std::runtime_error("Syntax Error: 'max_body_size' value cannot be empty.");
 	for (std::size_t i = 0; i < numStr.length(); ++i)
 	{
 		if (numStr[i]<'0' || numStr[i] > '9')
-			throw std::runtime_error("Syntax Error: 'max_body_size' must be a number with an optional 'm' at the end.");
+			throw std::runtime_error("Syntax Error: 'max_body_size' must be a valid number with an optional 'm', 'k', or 'g' suffix.");
 	}
-	unsigned long value = std::strtoul(numStr.c_str(), 0, 10);
-	if (!hasM)
-		value /= 1048576;
-	if (value > 2147483647UL)
-		throw std::runtime_error("Syntax Error: 'max_body_size' value is too large.");
+	unsigned long long value = std::atol(numStr.c_str());
+	if (value > std::numeric_limits<std::size_t>::max() / multiplier)
+		result = std::numeric_limits<std::size_t>::max();
+	else
+		result = static_cast<std::size_t> (value * multiplier);
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: Missing ';' in 'max_body_size' directive.");
-	
-	Server& current_server = servers_.back();
-	if (current_server.Tracker.has_max_body_size == true)
+	Server &current_server = servers_.back();
+	if (current_server.Tracker.has_max_body_size)
 		throw std::runtime_error("Syntax Error: Multiple 'max_body_size' directives detected in configuration");
-	current_server.max_body_size = value;
+	current_server.max_body_size = result;
 	current_server.Tracker.has_max_body_size = true;
 }
 
@@ -256,8 +263,8 @@ void ServerConfigParser::parseErrorPage(std::vector<std::string > &lineTokens, s
 			throw std::runtime_error("Syntax Error: Invalid status code in 'error_page': Must contain only digits.");
 	}
 
-	int statusCode = std::atoi(statusCodeStr.c_str());
-	if (statusCode < 100 || statusCode > 599)
+	std::size_t statusCode = std::atoll(statusCodeStr.c_str());
+	if ((statusCodeStr.size() > 3) || statusCode < 100 || statusCode > 599)
 		throw std::runtime_error("Syntax Error: Invalid status code in 'error_page': Must be in range 100-599.");
 
 	idx++;
@@ -271,7 +278,8 @@ void ServerConfigParser::parseErrorPage(std::vector<std::string > &lineTokens, s
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'error_page' directive must end with a semicolon.");
-	// errorPages[statusCode] = filePath;
+	Server& current_server = servers_.back();
+	current_server.error_page[std::to_string(statusCode)] = 	filePath;
 }
 
 void ServerConfigParser::parseRoute(std::vector<std::string > &lineTokens, std::size_t &idx)
@@ -285,8 +293,8 @@ void ServerConfigParser::parseRoute(std::vector<std::string > &lineTokens, std::
 	if (((idx + 1) < lineTokens.size() && lineTokens[idx + 1] != "{"))
 		throw std::runtime_error("Syntax Error: Multiple routes defined");
 	std::string route = lineTokens[idx];
-	if (route.empty() || (route != "default" && route[0] != '/'))
-		throw std::runtime_error("Syntax Error: Route must be 'default' or start with '/'");
+	if (route.empty() || route[0] != '/')
+		throw std::runtime_error("Syntax Error: Route must be start with '/'");
 
 	if (route != "default" && route != "/")
 	{
@@ -421,26 +429,39 @@ void ServerConfigParser::parseDefaultFile(std::vector<std::string> &lineTokens, 
 	current_route.Tracker.has_default_file = true;
 }
 
-void ServerConfigParser::parseCgi(std::vector<std::string> &lineTokens, std::size_t &idx)
+bool isValidChar(unsigned char c)
 {
-	if (idx + 2 >= lineTokens.size())
-		throw std::runtime_error("Syntax Error: 'cgi' needs value and semicolon");
+	return std::isalnum(c) || c == '/' || c == '.' || c == '-' || c == '_';
+}
+void ServerConfigParser::parseCgi(std::vector<std::string > &lineTokens, std::size_t &idx)
+{
+	if (idx + 3 >= lineTokens.size())
+		throw std::runtime_error("Syntax Error: 'cgi' needs extension, path and semicolon");
 	idx++;
-	std::string path = lineTokens[idx];
+	const std::string &extension = lineTokens[idx];
+	for (std::string::size_type i = 0; i < extension.size(); ++i)
+	{
+		unsigned char c = static_cast<unsigned char> (extension[i]);
+		if (!isValidChar(c))
+			throw std::runtime_error("Syntax Error: 'cgi' extension contains invalid character");
+	}
+	idx++;
+	const std::string &path = lineTokens[idx];
 	for (std::string::size_type i = 0; i < path.size(); ++i)
 	{
-		unsigned char c = static_cast<unsigned char>(path[i]);
-		if (!std::isalnum(c) && c != '/' && c != '.' && c != '-' && c != '_')
+		unsigned char c = static_cast<unsigned char> (path[i]);
+		if (!isValidChar(c))
 			throw std::runtime_error("Syntax Error: 'cgi' path contains invalid character");
 	}
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'cgi' directive must end with a semicolon");
-	Route &current_route = servers_.back().routes.back();
-	if (current_route.Tracker.has_cgi_extension == true)
-		throw std::runtime_error("Syntax Error: Multiple 'cgi' directives detected in configuration");
-	current_route.cgi_extension = path;
-	current_route.Tracker.has_cgi_extension = true;
+
+	if (servers_.empty() || servers_.back().routes.empty())
+		throw std::runtime_error("Internal Error: No current route available");
+
+	Route &currentRoute = servers_.back().routes.back();
+	currentRoute.cgi_extension[extension] = path;
 }
 
 void ServerConfigParser::parseUploadDir(std::vector<std::string > &lineTokens, std::size_t &idx)
@@ -465,17 +486,24 @@ void ServerConfigParser::parseUploadDir(std::vector<std::string > &lineTokens, s
 	current_route.Tracker.has_upload_dir = true;
 }
 
+void ServerConfigParser::parseRedirect(std::vector<std::string> &lineTokens, std::size_t &idx)
+{
+	if (idx + 2 >= lineTokens.size())
+		throw std::runtime_error("Syntax Error: 'redirect' needs value and semicolon");
+	idx += 2;
+	if (lineTokens[idx] != ";")
+		throw std::runtime_error("Syntax Error: 'redirect' directive must end with a semicolon");
+	Route &current_route = servers_.back().routes.back();
+	if (current_route.Tracker.has_redirect == true)
+		throw std::runtime_error("Syntax Error: Multiple 'redirect' directives detected in configuration");
+	current_route.redirect = lineTokens[idx - 1];
+	current_route.Tracker.has_redirect = true;
+}
+
 void ServerConfigParser::parseDirective(std::vector<std::string > &lineTokens)
 {
 	for (std::size_t idx = 0; idx < lineTokens.size(); ++idx)
 	{
-		// std::cout << "--------\n";
-		// std::cout << lineTokens[idx] << std::endl;
-		// // std::cout <<"[" << openingBraceCount_ << " : " <<  closingBraceCount_ << "]" << std::endl;
-		// std::cout << "--------\n";
-
-		// Handle brace counting within server block
-		// Handle brace counting within server block
 		if (insideServerBlock_)
 		{
 			if (lineTokens[idx] == "{")
@@ -505,7 +533,7 @@ void ServerConfigParser::parseDirective(std::vector<std::string > &lineTokens)
 				parseMaxBodySize(lineTokens, idx);
 			else if (lineTokens[idx] == "error_page")
 				parseErrorPage(lineTokens, idx);
-				else if (lineTokens[idx] == "methods")
+			else if (lineTokens[idx] == "methods")
 				parseMethods(lineTokens, idx);
 			else if (lineTokens[idx] == "route")
 				parseRoute(lineTokens, idx);
@@ -527,6 +555,8 @@ void ServerConfigParser::parseDirective(std::vector<std::string > &lineTokens)
 				parseDefaultFile(lineTokens, idx);
 			else if (lineTokens[idx] == "cgi")
 				parseCgi(lineTokens, idx);
+			else if (lineTokens[idx] == "redirect")
+				parseRedirect(lineTokens, idx);
 			else if (lineTokens[idx] == "upload_directory")
 				parseUploadDir(lineTokens, idx);
 			else
@@ -601,7 +631,7 @@ void ServerConfigParser::parseConfigFile(int argc, char* argv[])
 	{
 		loadConfigFile(argc, argv);
 		parseConfigLine();
-		printServers();
+		validate_config();
 	}
 	catch(const std::exception& e)
 	{
@@ -625,66 +655,40 @@ has_is_default(false),
 has_max_body_size(false) 
 {}
 
-// Beautiful printer implementation
-void ServerConfigParser::printServers() const {
-  if (servers_.empty()) {
-    std::cout << "No servers configured." << std::endl;
-    return;
-  }
 
-  std::cout << "=== Server Configuration ===" << std::endl;
-  for (std::vector < Server > ::size_type i = 0; i < servers_.size(); ++i) {
-    const Server & server = servers_[i];
+// Validate config
 
-    std::cout << "Server #" << (i + 1) << ":" << std::endl;
-    std::cout << "  Port: " << server.port << std::endl;
-    std::cout << "  Host: " << server.host << std::endl;
-    std::cout << "  Server Names: ";
-    if (server.server_names.empty()) {
-      std::cout << "(none)";
-    } else {
-      for (std::vector < std::string > ::size_type j = 0; j < server.server_names.size(); ++j) {
-        std::cout << server.server_names[j];
-        if (j < server.server_names.size() - 1) std::cout << ", ";
-      }
-    }
-    std::cout << std::endl;
-    std::cout << "  Is Default: " << (server.is_default ? "Yes" : "No") << std::endl;
-    std::cout << "  Max Body Size: " << server.max_body_size << " bytes" << std::endl;
-    std::cout << "  Error Pages:" << std::endl;
-    for (std::map < std::string, std::string > ::const_iterator it = server.error_page.begin(); it != server.error_page.end(); ++it) {
-      std::cout << "    " << it -> first << " -> " << it -> second << std::endl;
-    }
-
-    std::cout << "  Routes (" << server.routes.size() << "):" << std::endl;
-    if (server.routes.empty()) {
-      std::cout << "    (none)" << std::endl;
-    } else {
-      for (std::vector < Route > ::size_type j = 0; j < server.routes.size(); ++j) {
-        const Route & route = server.routes[j];
-        std::cout << "    Route #" << (j + 1) << ":" << std::endl;
-        std::cout << "      Path: " << route.path << std::endl;
-        std::cout << "      Redirect: " << (route.redirect.empty() ? "(none)" : route.redirect) << std::endl;
-        std::cout << "      Root Dir: " << (route.root_dir.empty() ? "(none)" : route.root_dir) << std::endl;
-        std::cout << "      Directory Listing: " << (route.directory_listing ? "Enabled" : "Disabled") << std::endl;
-        std::cout << "      Default File: " << route.default_file << std::endl;
-        std::cout << "      CGI Extension: " << (route.cgi_extension.empty() ? "(none)" : route.cgi_extension) << std::endl;
-        std::cout << "      Upload Dir: " << (route.upload_dir.empty() ? "(none)" : route.upload_dir) << std::endl;
-        std::cout << "      Accepted Methods: ";
-        if (route.accepted_methods.empty()) {
-          std::cout << "(none)";
-        } else {
-          for (std::vector < std::string > ::size_type k = 0; k < route.accepted_methods.size(); ++k) {
-            std::cout << route.accepted_methods[k];
-            if (k < route.accepted_methods.size() - 1) std::cout << ", ";
-          }
-        }
-        std::cout << std::endl;
-      }
-    }
-    std::cout << "------------------------" << std::endl;
-  }
-  std::cout << "=== End of Configuration ===" << std::endl;
+void ServerConfigParser::validate_config()
+{
+	std::map<std::string, int> server_name_tracker;
+	std::ostringstream oss_error;
+	for (int i = 0; i < static_cast<int>(servers_.size()); ++i)
+	{
+		if (!servers_[i].Tracker.has_port)
+			throw std::runtime_error("[EMERG] Error: missing port for server number: " + i);
+		
+		for (std::vector<std::string>::iterator it = servers_[i].server_names.begin(); it != servers_[i].server_names.end(); ++it)
+		{
+			std::string &server_name = *it;
+			if (server_name_tracker.find(server_name) != server_name_tracker.end())
+			{
+				oss_error << "[ERROR] Duplicate server name '" << server_name << "' found in server " << i << " (previously defined in server " << server_name_tracker[server_name] << ")";
+				throw std::runtime_error(oss_error.str());
+			}
+			else
+				server_name_tracker[server_name] = i;
+		}
+		for (size_t j = 0; j < servers_[i].routes.size(); ++j)
+		{
+			const Route &route = servers_[i].routes[j];
+			if (!route.redirect.empty() && route.Tracker.has_root_dir)
+			{
+				oss_error << "[ERROR] Server " << i << " route " << j <<
+					" has both redirect and root_dir specified" << std::endl;
+				throw std::runtime_error(oss_error.str());
+			}
+		}
+	}
 }
 
 // ----------------------------------- SET DEFAULT  PARAMETER  --------------------------------- //
@@ -696,18 +700,14 @@ Route::Route()
 	root_dir = "";
 	directory_listing = false;
 	default_file = "index.html";
-	cgi_extension = "";
 	upload_dir = "";
 
 }
 
 Server::Server()
 {
-	port = -1; // done
-	host = "default"; //done
-	// Empty server_name means accept all //done
+	port = -1;
+	host = "";
 	is_default = false;
-	error_page["404"] = "/default/path";
-	error_page["500"] = "/default/path";
-	max_body_size = 10;
+	max_body_size = 1000000;
 }

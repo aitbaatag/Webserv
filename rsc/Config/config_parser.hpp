@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <limits>
 
 void printTokens(const std::vector<std::string > &tokens, std::size_t i);
 
@@ -58,7 +59,7 @@ struct Route
 	std::string root_dir;
 	bool directory_listing;
 	std::string default_file;
-	std::string cgi_extension;
+	std::map<std::string, std::string> cgi_extension;
 	std::string upload_dir;
 	std::vector<std::string> accepted_methods;
 	RouteFoundDirective Tracker;
@@ -97,11 +98,6 @@ class ServerConfigParser {
 		bool insideServerBlock_;
 		bool insideRouteBlock_;
 		std::vector<Server> servers_;
-
-		// std::size_t current_server_;
-		// std::vector <Route> router_;
-		// Server &current_server_;
-		// Route &current_route_;
 	public:
 		
 		// contructor & deconstructor & public func
@@ -116,6 +112,9 @@ class ServerConfigParser {
 		void parseConfigLine();
 		void parseDirective(std::vector<std::string> &lineTokens);
 		void parseConfigFile(int argc, char* argv[]);
+		
+		// Validate Config
+		void validate_config();
 		
 		// Server Block Part
 		void parseServer(std::vector<std::string> &lineTokens, std::size_t &idx);              // Parse "server" block
