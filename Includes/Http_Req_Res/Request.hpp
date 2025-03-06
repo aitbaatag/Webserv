@@ -54,3 +54,4 @@ public:
 
 unsigned long hexToULong(const std::string &hexStr);
 #endif
+
