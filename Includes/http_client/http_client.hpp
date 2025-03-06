@@ -43,10 +43,13 @@ struct Request {
   std::string Content_Type;
   int error_status = 0; // the error status of the request
   int temp_file_fd;
+  int file_fd;
   std::string filename;
   std::string currentHeader;
   std::string currentData;
   int body_read;
+  std::ofstream fileStream;
+  std::ifstream tmpFileStream;
 };
 class HttpClient {
 public:

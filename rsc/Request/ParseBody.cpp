@@ -114,3 +114,112 @@ bool HttpRequest::MultipartBody(HttpClient &client) {
   }
   return false;
 }
+
+bool HttpRequest::parseBody(HttpClient &client) {
+  const size_t CHUNK_SIZE = 16384; // 16KB
+  char buffer[CHUNK_SIZE];
+
+  if (!client.Srequest.tmpFileStream.is_open()) {
+    client.Srequest.tmpFileStream.open(".temp_file",
+                                       std::ios::in | std::ios::binary);
+    if (!client.Srequest.tmpFileStream) {
+      std::cerr << "Failed to open temporary file" << std::endl;
+      client.Srequest.error_status = 500; // Internal Server Error
+      client.set_request_status(Failed);
+      return false;
+    }
+  }
+
+  client.Srequest.tmpFileStream.read(buffer, CHUNK_SIZE);
+  std::streamsize bytesRead = client.Srequest.tmpFileStream.gcount();
+
+  if (bytesRead <= 0) {
+    // End of file or error
+    client.Srequest.tmpFileStream.close();
+    client.set_request_status(Complete);
+    return true;
+  }
+
+  switch (client.SMrequest.stateMultipart) {
+  case START: {
+    std::string boundary = "--" + client.Srequest.boundary;
+    std::string chunk(buffer, bytesRead);
+
+    size_t boundaryPos = chunk.find(boundary);
+    if (boundaryPos == std::string::npos) {
+      std::cerr << "Boundary not found" << std::endl;
+      client.Srequest.error_status = 400; // Bad Request
+      client.set_request_status(Failed);
+      client.Srequest.tmpFileStream.close();
+      return false;
+    }
+
+    client.SMrequest.stateMultipart = HEADERS;
+    client.Srequest.tmpFileStream.seekg(boundaryPos + boundary.length(),
+                                        std::ios::beg);
+    break;
+  }
+
+  case HEADERS: {
+    std::string headers;
+    char c;
+    while (client.Srequest.tmpFileStream.get(c)) {
+      headers += c;
+      if (headers.length() >= 4 &&
+          headers.substr(headers.length() - 4) == "\r\n\r\n") {
+        break; // End of headers
+      }
+    }
+
+    size_t filenamePos = headers.find("filename=\"");
+    if (filenamePos != std::string::npos) {
+      filenamePos += 10;
+      size_t filenameEnd = headers.find("\"", filenamePos);
+      client.Srequest.filename =
+          headers.substr(filenamePos, filenameEnd - filenamePos);
+    }
+
+    client.Srequest.fileStream.open(client.Srequest.filename,
+                                    std::ios::out | std::ios::binary);
+    if (!client.Srequest.fileStream) {
+      std::cerr << "Failed to create file: " << client.Srequest.filename
+                << std::endl;
+      client.Srequest.error_status = 500; // Internal Server Error
+      client.set_request_status(Failed);
+      client.Srequest.tmpFileStream.close();
+      return false;
+    }
+
+    client.SMrequest.stateMultipart = DATA;
+    break;
+  }
+
+  case DATA: {
+    // Write data to the destination file
+    client.Srequest.fileStream.write(buffer, bytesRead);
+    if (!client.Srequest.fileStream) {
+      std::cerr << "Failed to write to file: " << client.Srequest.filename
+                << std::endl;
+      client.Srequest.error_status = 500; // Internal Server Error
+      client.set_request_status(Failed);
+      client.Srequest.tmpFileStream.close();
+      client.Srequest.fileStream.close();
+      return false;
+    }
+
+    std::string chunk(buffer, bytesRead);
+    std::string endBoundary = "--" + client.Srequest.boundary + "--";
+    if (chunk.find(endBoundary) != std::string::npos) {
+      client.Srequest.fileStream.close();
+      client.Srequest.tmpFileStream.close();
+      client.SMrequest.stateMultipart = START; // Reset for the next request
+      client.set_request_status(Complete);
+      return true;
+    }
+    break;
+  }
+    return false;
+  }
+
+  return true;
+}

@@ -27,6 +27,7 @@ enum MultipartState {
   CLOSE_BOUNDARY,
   HEADERS,
   DATA,
+  CREATE_FILE,
   END_BOUNDARY
 };
 enum StateStructuredField {
