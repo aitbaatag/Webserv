@@ -1,5 +1,6 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
-#include <iostream>
+#include "../../Includes/http_client/http_client.hpp"
+
 HttpRequest::HttpRequest() {}
 bool HttpRequest::parseRequestLine(HttpClient &client) {
   std::string reqBuff = client.get_request_buffer();

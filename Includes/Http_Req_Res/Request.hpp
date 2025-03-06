@@ -1,11 +1,9 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
 
-#include "../http_client/http_client.hpp"
-#include <string>
-// for trim function
-#include <algorithm>
-#include <cctype>
+#include "../libraries/Libraries.hpp"
+class HttpClient;
+
 #define CRLF "\r\n"
 #define CRLFCRLF "\r\n\r\n"
 #define GET "GET"

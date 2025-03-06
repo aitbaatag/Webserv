@@ -1,4 +1,5 @@
 #include "../../Includes/Http_Req_Res/Response.hpp"
+#include "../../Includes/http_client/http_client.hpp"
 
 Response::Response() {}
 

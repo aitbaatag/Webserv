@@ -1,7 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
-#include <iostream>
-#include <string>
-
+#include "../../Includes/http_client/http_client.hpp"
 bool HttpRequest::isStrucutredField(const std::string &field) {
   return structuredFields.find(field) != structuredFields.end();
 }

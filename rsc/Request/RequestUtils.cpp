@@ -1,4 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
+#include "../../Includes/http_client/http_client.hpp"
 
 bool HttpRequest::validMethod(HttpClient &Clinet, const std::string &method) {
   if (method != GET && method != POST && method != DELETE) {

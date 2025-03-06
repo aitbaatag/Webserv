@@ -24,9 +24,6 @@ void HttpClient::append_to_request() {
     return;
   buffer[bytes_received] = '\0';
   request_buffer_ += buffer;
-  //  std::cout << "read from client: " << socket_fd_ << " => " <<
-  //  request_buffer_
-  //            << std::endl;
 }
 
 void HttpClient::registerEpollEvents(int epoll_fd_) {

@@ -1,8 +1,10 @@
-#include "../../Includes/Http_Req_Res/Response.hpp"
-#include "../../Includes/Http_Req_Res/Request.hpp"
-#include "../../Includes/http_client/http_client.hpp"
-#include "../../rsc/Request/server_socket.hpp"
-#include <sys/epoll.h>
+#include "../Includes/Http_Req_Res/StateMachine.hpp"
+#include "../Includes/Http_Req_Res/Request.hpp"
+#include "../Includes/http_client/http_client.hpp"
+#include "../Includes/Http_Req_Res/Response.hpp"
+#include "../Includes/Config/Config.hpp"
+#include "../Includes/server/server_socket.hpp"
+
 
 void handleNewConnection(int client_fd, int epfd,
                          std::map<int, HttpClient> &clients) {
@@ -42,24 +44,24 @@ void processEpollEvents(int ready_fd_count, struct epoll_event *events,
   }
 }
 
-int main() {
-  try {
-    epoll_event events[MAX_EVENTS] = {};
-    ServerSocket server(8081);
-    HttpRequest req;
-    Response res;
-    server.createEpollInstance();
-    int epfd = server.getEpollInstanceFd();
-    std::map<int, HttpClient> clients;
-
-    while (true) {
-      int client_fd = server.accept_connection();
-      if (client_fd >= 0)
-        handleNewConnection(client_fd, epfd, clients);
-      int ready_fd_count = epoll_wait(epfd, events, MAX_EVENTS, 0);
-      if (ready_fd_count < 0)
-        throw std::runtime_error("epoll_wait failed: " +
-                                 std::string(strerror(errno)));
+int main(int argc, char **argv) {
+	try {
+		// ServerConfigParser Config;
+		// Config.parseConfigFile(argc, argv);
+		epoll_event events[MAX_EVENTS] = {};
+		ServerSocket server(8081);
+		HttpRequest req;
+		Response res;
+		server.createEpollInstance();
+		int epfd = server.getEpollInstanceFd();
+		std::map<int, HttpClient> clients;
+	while (true) {
+		int client_fd = server.accept_connection();
+		if (client_fd >= 0)
+			handleNewConnection(client_fd, epfd, clients);
+		int ready_fd_count = epoll_wait(epfd, events, MAX_EVENTS, 0);
+		if (ready_fd_count < 0)
+			throw std::runtime_error("epoll_wait failed: " + std::string(strerror(errno)));
       processEpollEvents(ready_fd_count, events, clients, req, res);
     }
   } catch (const std::exception &e) {

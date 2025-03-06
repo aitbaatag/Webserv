@@ -1,7 +1,7 @@
 #ifndef STATEMACHINE_HPP
-#define STATEMACHINE_HPP
-#include <set>
-#include <string>
+# define STATEMACHINE_HPP
+
+#include "../libraries/Libraries.hpp"
 
 enum StateHeaders {
   STATE_HEADER_NAME,
@@ -38,6 +38,7 @@ enum StateRequestLine { STATE_METHOD, STATE_URI, STATE_VERSION, STATE_CRLF };
 const std::set<std::string> structuredFields = {
     "Content-Length", "Date",          "Content-Type",
     "Cache-Control",  "Authorization", "Set-Cookie"};
+
 class StateMachine {
 public:
   StateRequestLine stateRequestLine;

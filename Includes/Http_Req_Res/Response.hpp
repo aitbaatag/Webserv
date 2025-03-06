@@ -1,17 +1,8 @@
 #ifndef RESPONSE_HPP
 #define RESPONSE_HPP
 
-#include <iostream>
-#include <map>
-#include <string>
-#include <vector>
-#include <fstream>
-#include <sstream>
-#include <sys/types.h>  
-#include <sys/stat.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include "../../Includes/http_client/http_client.hpp"
+#include "../libraries/Libraries.hpp"
+class HttpClient;
 
 
 class Response {

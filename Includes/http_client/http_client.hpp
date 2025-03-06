@@ -2,21 +2,9 @@
 #ifndef HTTP_CLIENT_HPP
 #define HTTP_CLIENT_HPP
 
-#include "../../Includes/Http_Req_Res/StateMachine.hpp"
-#include <arpa/inet.h>
-#include <cerrno>
-#include <cstring>
-#include <fcntl.h>
-#include <iostream>
-#include <map>
-#include <netinet/in.h>
-#include <sstream>
-#include <string>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#define MAX_EVENTS 10
-#define MAX_RECV 2
+#include "../Http_Req_Res/StateMachine.hpp"
+#include "../libraries/Libraries.hpp"
+
 
 // Content-Type: text/html; charset=UTF-8; version=1.0
 enum Status { InProgress, Complete, Failed };
@@ -39,6 +27,7 @@ struct Request {
   std::string Content_Type;
   int error_status = 0; // the error status of the request
 };
+
 class HttpClient {
 public:
   int socket_fd_;
@@ -47,6 +36,7 @@ public:
   Status request_status_;
   Status response_status_;
   int pos_; // position in the request_buffer_ to avoid re-parsing the same data
+
 
 public:
   StateMachine SMrequest;

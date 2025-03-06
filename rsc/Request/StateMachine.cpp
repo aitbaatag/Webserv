@@ -1,5 +1,5 @@
 #include "../../Includes/Http_Req_Res/StateMachine.hpp"
-#include <iostream>
+
 StateMachine::StateMachine() {
   stateRequestLine = STATE_METHOD;
   state = STATE_REQUEST_LINE;
