@@ -24,9 +24,9 @@ void HttpClient::append_to_request() {
     return;
   buffer[bytes_received] = '\0';
   request_buffer_ += buffer;
-  //  std::cout << "read from client: " << socket_fd_ << " => " <<
-  //  request_buffer_
-  //            << std::endl;
+  // std::cout << "read from client: " << socket_fd_ << " => " <<
+  // request_buffer_
+  //           << std::endl;
 }
 
 void HttpClient::registerEpollEvents(int epoll_fd_) {
@@ -47,3 +47,7 @@ int HttpClient::get_pos() const { return pos_; }
 std::string HttpClient::get_request_buffer() const { return request_buffer_; }
 
 void HttpClient::set_request_status(Status status) { request_status_ = status; }
+
+void HttpClient::set_response_status(Status status) {
+  response_status_ = status;
+}

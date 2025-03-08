@@ -9,9 +9,26 @@ enum StateHeaders {
   STATE_COLON,
   STATE_HEADER_CRLF,
   STATE_STRUCUTRE_FIELD,
+  STATE_HEADER_DELIMITER,
+  STATE_HEADER_DELIMITER2,
+  STATE_SPACE,
   STATE_ERROR
 };
-
+enum StateChunk {
+  STATE_CHUNK_SIZE,
+  STATE_CHUNK_DATA,
+  STATE_CHUNK_END,
+  STATE_CHUNK_LF, // Line Feed like '\n' after '\r'
+  STATE_CHUNK_CRLF
+};
+enum MultipartState {
+  START,
+  OPEN_BOUNDARY,
+  CLOSE_BOUNDARY,
+  HEADERS,
+  DATA,
+  END_BOUNDARY
+};
 enum StateStructuredField {
   STATE_START,
   STATE_CONTENT_LENGTH,
@@ -26,9 +43,6 @@ enum ParseState {
   STATE_REQUEST_LINE,
   STATE_HEADERS,
   STATE_BODY,
-  STATE_CHUNK_SIZE,
-  STATE_CHUNK_DATA,
-  STATE_CHUNK_END,
   STATE_COMPLETE
 };
 enum StateRequestLine { STATE_METHOD, STATE_URI, STATE_VERSION, STATE_CRLF };
@@ -41,6 +55,8 @@ public:
   ParseState state;
   StateHeaders stateHeaders;
   StateStructuredField stateStructuredField;
+  MultipartState stateMultipart;
+  StateChunk statechunk;
   StateMachine();
 };
 #endif

@@ -1,4 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
+#include <iostream>
 HttpRequest::HttpRequest() {}
 bool HttpRequest::parseRequestLine(HttpClient &client) {
   std::string reqBuff = client.get_request_buffer();
@@ -28,7 +29,6 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
           return false;
         } else {
           decodeRequestURI(client);
-          std::cout << "decodeRequestURI " << client.Srequest.uri << std::endl;
           parseURI(client);
           client.SMrequest.stateRequestLine = STATE_VERSION;
         }
@@ -55,7 +55,6 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
         client.SMrequest.state = STATE_HEADERS;
         pos++; // Skip the '\n'
         client.update_pos(pos);
-        client.set_request_status(Complete);
         return true; // Successfully parsed the request line
       } else {
         client.Srequest.error_status = 400; // Bad Request
@@ -74,32 +73,52 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
 void HttpRequest::parseIncrementally(HttpClient &client) {
   size_t pos = client.get_pos();
   std::string reqBuff = client.get_request_buffer();
-  while (pos < reqBuff.length()) {
+  while (client.get_pos() < reqBuff.length()) {
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
+      std::cout << "Request Line" << std::endl;
       if (!parseRequestLine(client))
         return;
       break;
     case STATE_HEADERS:
+      std::cout << "Headers" << std::endl;
       if (!parseHeaders(client))
         return;
-      break;
-    case STATE_BODY:
-      // parseBody(client);
-      break;
-    case STATE_CHUNK_SIZE:
-      // parseChunkSize(client);
-      break;
-    case STATE_CHUNK_DATA:
-      // parseChunkData(client);
-      break;
-    case STATE_CHUNK_END:
-      // parseChunkEnd(client);
-      break;
-    default:
+    case STATE_BODY: {
+      std::cout << "Body Type" << std::endl;
+      BodyType bodyType = determineBodyType(client.Srequest.headers);
+      if (bodyType == BodyType::MULTIPART || bodyType == BodyType::CHUNKED) {
+        client.Srequest.temp_file_fd =
+            open(".temp_file", O_CREAT | O_RDWR, 0666);
+      }
+      switch (bodyType) {
+      case BodyType::NO_BODY: {
+        std::cout << "NO_BODY" << std::endl;
+        client.set_request_status(Complete);
+        break;
+      }
+      case BodyType::MULTIPART: {
+        std::cout << "MULTIPART" << std::endl;
+        if (!MultipartBody(client))
+          client.SMrequest.state = STATE_COMPLETE;
+        else
+          client.SMrequest.state = STATE_BODY;
+        break;
+      }
+      case BodyType::CHUNKED: {
+        std::cout << "CHUNKED" << std::endl;
+        if (!parseChunkedBody(client))
+          return;
+        break;
+      }
+      }
+    }
+    case STATE_COMPLETE:
+      client.set_request_status(Complete);
+      client.SMrequest.state = STATE_COMPLETE;
+      return;
       break;
     }
-    pos++;
   }
 }
 
@@ -110,4 +129,8 @@ void HttpRequest::printRequestLine(HttpClient &client) {
   std::cout << "Version: " << client.Srequest.version << std::endl;
   std::cout << "Query: " << client.Srequest.query << std::endl;
   std::cout << "Fragment: " << client.Srequest.fragment << std::endl;
+  // for (auto const &[key, value] : client.Srequest.headers) {
+  //   std::cout << "{" << key << ": " << value << "}\n";
+  // }
 }
+

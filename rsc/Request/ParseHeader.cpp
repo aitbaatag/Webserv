@@ -1,10 +1,18 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
+#include <iostream>
 #include <string>
 
 bool HttpRequest::isStrucutredField(const std::string &field) {
   return structuredFields.find(field) != structuredFields.end();
 }
+std::string trim(const std::string &str) {
+  size_t start = str.find_first_not_of(" \t\n\r\f\v");
+  if (start == std::string::npos)
+    return ""; // All spaces
 
+  size_t end = str.find_last_not_of(" \t\n\r\f\v");
+  return str.substr(start, end - start + 1);
+}
 bool ValidMediaType(const std::string &media_type) {
   if (media_type == "text/html" || media_type == "text/plain" ||
       media_type == "application/json" || media_type == "application/xml" ||
@@ -14,21 +22,22 @@ bool ValidMediaType(const std::string &media_type) {
   return false;
 }
 bool HttpRequest::ParseContent_Type(HttpClient &client) {
-  std::string field_body;
-  field_body = client.Srequest.headers["Content-Type"];
+  std::string field_body = client.Srequest.field_body;
   std::map<std::string, std::string> content_type_params;
   std::string param;
   std::string media_type;
   std::string charset;
   std::string boundary;
-  media_type = field_body.substr(0, field_body.find(";"));
+  size_t semicolonPos = field_body.find(';');
+  media_type = field_body.substr(0, semicolonPos);
   if (!ValidMediaType(media_type)) {
     client.Srequest.error_status = 415; // Unsupported Media Type
     client.set_request_status(Failed);
     std::cout << "Unsupported Media Type" << std::endl;
     return false;
   }
-  field_body = field_body.substr(field_body.find(";") + 1);
+  field_body = field_body.substr(semicolonPos + 1);
+  field_body = trim(field_body);
   std::istringstream field_body_stream(field_body);
   while (std::getline(field_body_stream, param, ';')) {
     size_t pos = param.find("=");
@@ -41,8 +50,6 @@ bool HttpRequest::ParseContent_Type(HttpClient &client) {
     } else
       content_type_params[key] = value;
   }
-  client.Srequest.Content_Type_ =
-      std::make_pair(media_type, content_type_params);
   return true;
 }
 void HttpRequest::SetStartState(HttpClient &client) {
@@ -64,16 +71,19 @@ void HttpRequest::SetStartState(HttpClient &client) {
 }
 bool HttpRequest::ParseStructuredField(HttpClient &client) {
   std::string reqBuff = client.get_request_buffer();
-  size_t pos = client.get_pos() + 1;
+  size_t pos = client.get_pos();
   while (pos < reqBuff.length()) {
     char c = reqBuff[pos];
     switch (client.SMrequest.stateStructuredField) {
     case STATE_START:
       SetStartState(client);
+      continue;
     case STATE_CONTENT_LENGTH:
       if (c == '\r') {
+        std::cout << "content length: " << client.Srequest.field_body
+                  << std::endl;
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
-        client.SMrequest.stateStructuredField = STATE_START;
+        client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
         client.Srequest.body_length = std::stoi(client.Srequest.field_body);
       } else if (c >= '0' && c <= '9') {
         client.Srequest.field_body += c;
@@ -85,29 +95,50 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
       if (c == '\r') {
         // TODO : parse date
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
-        client.SMrequest.stateStructuredField = STATE_START;
+        client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
       } else {
         client.Srequest.field_body += c;
       }
+      break;
     case STATE_CONTENT_TYPE:
       if (c == '\r') {
-        if (!ParseContent_Type(client))
+        if (!ParseContent_Type(client)) {
           return false;
-        client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
-        client.SMrequest.stateStructuredField = STATE_START;
+        }
+        client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
       } else {
         client.Srequest.field_body += c;
       }
+      break;
     case STATE_CACHE_CONTROL:
       // TODO : parse cache control
+      if (c == '\r') {
+        client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
+      } else {
+        client.Srequest.field_body += c;
+      }
+      break;
     case STATE_AUTHORIZATION:
       // TODO : parse authorization
+      if (c == '\r') {
+        client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
+      } else {
+        client.Srequest.field_body += c;
+      }
+      break;
     case STATE_SET_COOKIE:
       // TODO : parse set cookie
+      if (c == '\r') {
+        client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
+      } else {
+        client.Srequest.field_body += c;
+      }
+      break;
     case STATE_STRUCTURED_FIELD_END:
       if (c == '\n') {
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_START;
+        client.update_pos(pos);
         return true;
       } else {
         return false;
@@ -128,8 +159,7 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
     char c = reqBuff[pos];
     switch (client.SMrequest.stateHeaders) {
     case STATE_HEADER_NAME:
-      std::cout << "STATE_HEADER_NAME" << std::endl;
-      if ((c < 32 && c < 127) && c != ':') {
+      if ((c > 32 && c < 127) && c != ':') {
         client.SMrequest.stateHeaders = STATE_HEADER_NAME;
         client.Srequest.field_name += c;
       } else if (c == ':') {
@@ -139,20 +169,24 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       }
       break;
     case STATE_STRUCUTRE_FIELD:
-      ParseStructuredField(client);
-      break;
+      if (!ParseStructuredField(client)) {
+        client.SMrequest.stateHeaders = STATE_ERROR;
+        return false;
+      }
+      pos = client.get_pos();
+      continue;
     case STATE_HEADER_VALUE:
       if (c == '\r') {
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
-      } else if ((c < 32 && c < 127)) {
+      } else if (c >= 32 && c < 127) {
         client.SMrequest.stateHeaders = STATE_HEADER_VALUE;
         client.Srequest.field_body += c;
       } else {
         client.SMrequest.stateHeaders = STATE_ERROR;
       }
       break;
-    case STATE_COLON:
-      if (c == ' ') {
+    case STATE_SPACE:
+      if (c > 32 && c < 127) {
         if (isStrucutredField(client.Srequest.field_name)) {
           client.SMrequest.stateHeaders = STATE_STRUCUTRE_FIELD;
         } else
@@ -160,16 +194,41 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       } else {
         client.SMrequest.stateHeaders = STATE_ERROR;
       }
+      continue;
+    case STATE_COLON:
+      if (c == ' ') {
+        client.SMrequest.stateHeaders = STATE_SPACE;
+      } else {
+        client.SMrequest.stateHeaders = STATE_ERROR;
+      }
+      break;
     case STATE_HEADER_CRLF:
       if (c == '\n') {
         client.Srequest.headers[client.Srequest.field_name] =
             client.Srequest.field_body;
         client.Srequest.field_name.clear();
         client.Srequest.field_body.clear();
-        client.SMrequest.stateHeaders = STATE_HEADER_NAME;
+        client.SMrequest.stateHeaders = STATE_HEADER_DELIMITER;
       } else {
         client.SMrequest.stateHeaders = STATE_ERROR;
       }
+      break;
+    case STATE_HEADER_DELIMITER:
+      if (c == '\r') {
+        client.SMrequest.stateHeaders = STATE_HEADER_DELIMITER2;
+        break;
+      } else
+        client.SMrequest.stateHeaders = STATE_HEADER_NAME;
+      continue;
+    case STATE_HEADER_DELIMITER2:
+      if (c == '\n') {
+        std::cout << "STATE_HEADER_DELIMITER2" << std::endl;
+        client.SMrequest.state = STATE_BODY;
+        pos++;
+        client.update_pos(pos);
+        return true;
+      } else
+        client.SMrequest.stateHeaders = STATE_ERROR;
       break;
     case STATE_ERROR:
       client.Srequest.field_name.clear();

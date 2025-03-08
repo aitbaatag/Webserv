@@ -7,6 +7,7 @@
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <netinet/in.h>
@@ -16,28 +17,36 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #define MAX_EVENTS 10
-#define MAX_RECV 2
+#define MAX_RECV 16000
 
 // Content-Type: text/html; charset=UTF-8; version=1.0
 enum Status { InProgress, Complete, Failed };
 struct Request {
-  std::string method;
-  std::string uri;
-  std::string path;
-  std::string version;
+  std::string method = "";
+  std::string uri = "";
+  std::string path = "";
+  std::string version = "";
   std::string query;    // the query string of the request like ?name=ahmed
   std::string fragment; // the fragment of the request like #section1
   std::map<std::string, std::string> headers;
-  std::pair<std::string, std::map<std::string, std::string>> Content_Type_;
+  std::map<std::string, std::string> formData;
   std::string field_name;
   std::string field_body;
+  std::string chunkSizeStr;
+  int chunkSize;
+  std::string chunkData;
   std::string media_type;
   size_t chunk_size;
   size_t body_length;
   std::string boundary;
   std::string charset;
   std::string Content_Type;
-  int error_status; // the error status of the request
+  int error_status = 0; // the error status of the request
+  int temp_file_fd;
+  std::string filename;
+  std::string currentHeader;
+  std::string currentData;
+  int body_read;
 };
 class HttpClient {
 public:
@@ -62,6 +71,7 @@ public:
   int get_pos() const;
   std::string get_request_buffer() const;
   void set_request_status(Status status);
+  void set_response_status(Status status);
 };
 
 #endif
