@@ -1,34 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
-
-BodyType HttpRequest::determineBodyType(
-    const std::map<std::string, std::string> &headers) {
-  if (headers.find("Transfer-Encoding") != headers.end() &&
-      headers.at("Transfer-Encoding") == "chunked") {
-    return BodyType::CHUNKED;
-  } else if (headers.find("Content-Length") != headers.end()) {
-    return BodyType::MULTIPART;
-  } else {
-    return BodyType::NO_BODY;
-  }
-}
-
-unsigned long hexToULong(const std::string &hexStr) {
-  unsigned long value = 0;
-  for (size_t i = 0; i < hexStr.length(); i++) {
-    char c = hexStr[i];
-    value *= 16;
-    if (c >= '0' && c <= '9') {
-      value += c - '0';
-    } else if (c >= 'A' && c <= 'F') {
-      value += 10 + (c - 'A');
-    } else if (c >= 'a' && c <= 'f') {
-      value += 10 + (c - 'a');
-    } else {
-      throw std::invalid_argument("Invalid hexadecimal character");
-    }
-  }
-  return value;
-}
+#include "../../Includes/http_client/http_client.hpp"
 
 bool HttpRequest::validMethod(HttpClient &Clinet, const std::string &method) {
   if (method != GET && method != POST && method != DELETE) {

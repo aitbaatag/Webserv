@@ -1,7 +1,7 @@
 #ifndef STATEMACHINE_HPP
-#define STATEMACHINE_HPP
-#include <set>
-#include <string>
+# define STATEMACHINE_HPP
+
+#include "../libraries/Libraries.hpp"
 
 enum StateHeaders {
   STATE_HEADER_NAME,
@@ -14,21 +14,7 @@ enum StateHeaders {
   STATE_SPACE,
   STATE_ERROR
 };
-enum StateChunk {
-  STATE_CHUNK_SIZE,
-  STATE_CHUNK_DATA,
-  STATE_CHUNK_END,
-  STATE_CHUNK_LF, // Line Feed like '\n' after '\r'
-  STATE_CHUNK_CRLF
-};
-enum MultipartState {
-  START,
-  OPEN_BOUNDARY,
-  CLOSE_BOUNDARY,
-  HEADERS,
-  DATA,
-  END_BOUNDARY
-};
+
 enum StateStructuredField {
   STATE_START,
   STATE_CONTENT_LENGTH,
@@ -43,20 +29,22 @@ enum ParseState {
   STATE_REQUEST_LINE,
   STATE_HEADERS,
   STATE_BODY,
+  STATE_CHUNK_SIZE,
+  STATE_CHUNK_DATA,
+  STATE_CHUNK_END,
   STATE_COMPLETE
 };
 enum StateRequestLine { STATE_METHOD, STATE_URI, STATE_VERSION, STATE_CRLF };
 const std::set<std::string> structuredFields = {
     "Content-Length", "Date",          "Content-Type",
     "Cache-Control",  "Authorization", "Set-Cookie"};
+
 class StateMachine {
 public:
   StateRequestLine stateRequestLine;
   ParseState state;
   StateHeaders stateHeaders;
   StateStructuredField stateStructuredField;
-  MultipartState stateMultipart;
-  StateChunk statechunk;
   StateMachine();
 };
 #endif

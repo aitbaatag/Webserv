@@ -1,21 +1,10 @@
 #ifndef SERVER_SOCKET_H
 #define SERVER_SOCKET_H
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <stdexcept>
-#include <unistd.h>
-#include <cerrno>
-#include <arpa/inet.h>
-#include <cstring>
-#include <sys/epoll.h>
-#include <fcntl.h>
-#include <vector>
-#include <iostream>
-#include <string>
-#include <map>
+#include "../libraries/Libraries.hpp"
 
-
+#define MAX_EVENTS 10
+#define MAX_RECV 2048
 
 class ServerSocket {
 	private:

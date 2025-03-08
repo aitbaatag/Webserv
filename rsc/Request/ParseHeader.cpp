@@ -1,7 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
-#include <iostream>
-#include <string>
-
+#include "../../Includes/http_client/http_client.hpp"
 bool HttpRequest::isStrucutredField(const std::string &field) {
   return structuredFields.find(field) != structuredFields.end();
 }
@@ -47,9 +45,11 @@ bool HttpRequest::ParseContent_Type(HttpClient &client) {
       client.Srequest.charset = value;
     else if (key == "boundary") {
       client.Srequest.boundary = value;
+    std::cout << "boundary: " << client.Srequest.boundary << std::endl;
     } else
       content_type_params[key] = value;
   }
+  client.Srequest.Content_Type_ = {media_type, content_type_params};
   return true;
 }
 void HttpRequest::SetStartState(HttpClient &client) {
@@ -80,8 +80,6 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
       continue;
     case STATE_CONTENT_LENGTH:
       if (c == '\r') {
-        std::cout << "content length: " << client.Srequest.field_body
-                  << std::endl;
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
         client.Srequest.body_length = std::stoi(client.Srequest.field_body);
@@ -105,6 +103,7 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
         if (!ParseContent_Type(client)) {
           return false;
         }
+        client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
       } else {
         client.Srequest.field_body += c;
@@ -113,6 +112,7 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
     case STATE_CACHE_CONTROL:
       // TODO : parse cache control
       if (c == '\r') {
+        client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
       } else {
         client.Srequest.field_body += c;
@@ -121,6 +121,7 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
     case STATE_AUTHORIZATION:
       // TODO : parse authorization
       if (c == '\r') {
+        client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
       } else {
         client.Srequest.field_body += c;
@@ -129,6 +130,7 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
     case STATE_SET_COOKIE:
       // TODO : parse set cookie
       if (c == '\r') {
+        client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
       } else {
         client.Srequest.field_body += c;
@@ -222,9 +224,9 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       continue;
     case STATE_HEADER_DELIMITER2:
       if (c == '\n') {
-        std::cout << "STATE_HEADER_DELIMITER2" << std::endl;
         client.SMrequest.state = STATE_BODY;
         pos++;
+        client.set_request_status(Complete);
         client.update_pos(pos);
         return true;
       } else

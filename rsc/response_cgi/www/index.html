@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Page Not Found</title>
+    <title>Welcome - Home</title>
     <style>
         * {
             margin: 0;
@@ -26,7 +26,7 @@
         }
 
         .container {
-            max-width: 600px;
+            max-width: 700px;
             padding: 40px;
             background-color: white;
             border-radius: 10px;
@@ -35,22 +35,22 @@
             animation: fadeIn 1s ease-out;
         }
 
-        .error-icon {
+        .welcome-icon {
             font-size: 80px;
             animation: floatUpDown 3s ease-in-out infinite;
             display: inline-block;
             margin-bottom: 15px;
         }
 
-        .error-code {
-            font-size: 100px;
-            font-weight: 700;
+        .title {
+            font-size: 32px;
+            font-weight: bold;
             color: #007bff;
-            margin-bottom: 10px;
-            animation: bounce 2s infinite;
+            margin-bottom: 15px;
+            animation: slideInRight 0.8s ease-out;
         }
 
-        .error-message {
+        .description {
             font-size: 18px;
             color: #555;
             line-height: 1.6;
@@ -67,6 +67,8 @@
             border-radius: 50px;
             font-weight: 600;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
             animation: fadeIn 1.5s ease-out;
         }
 
@@ -97,6 +99,11 @@
             to { opacity: 1; }
         }
 
+        @keyframes slideInRight {
+            from { transform: translateX(50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
         @keyframes slideInLeft {
             from { transform: translateX(-50px); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
@@ -107,19 +114,18 @@
             50% { transform: translateY(-15px); }
         }
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
         @keyframes moveParticle {
             0% { transform: translateY(0) translateX(0); opacity: 1; }
             100% { transform: translateY(-1000px) translateX(100px); opacity: 0; }
         }
 
         @media (max-width: 576px) {
-            .error-code {
-                font-size: 80px;
+            .title {
+                font-size: 28px;
+            }
+
+            .description {
+                font-size: 16px;
             }
         }
     </style>
@@ -127,13 +133,12 @@
 <body>
     <div class="particles" id="particles"></div>
     <div class="container">
-        <div class="error-icon">⚠️</div>
-        <div class="error-code">404</div>
-        <p class="error-message">
-            Oops! The page you're looking for doesn't exist. <br>
-            It may have been moved or deleted.
+        <div class="welcome-icon">🚀</div>
+        <h1 class="title">Welcome to Our Website</h1>
+        <p class="description">
+            We're glad to have you here! enjoy a smooth experience.
         </p>
-        <a href="/home" class="button">Go to Homepage</a>
+        <a href="/login" class="button">Login</a>
     </div>
 
     <script>
