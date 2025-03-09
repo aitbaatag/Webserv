@@ -12,7 +12,6 @@
 #define POST "POST"
 #define DELETE "DELETE"
 
-enum class BodyType { CHUNKED, MULTIPART, NO_BODY };
 class HttpRequest {
 private:
   // parsing functions for request line
@@ -23,11 +22,12 @@ private:
 
   // parsing functions for body
   bool parseChunkedBody(HttpClient &client);
-  bool MultipartBody(HttpClient &client);
+  bool StorMultipartBody(HttpClient &client);
   void parseChunkSize(HttpClient &client);
   void parseChunkData(HttpClient &client);
   void parseChunkEnd(HttpClient &client);
-
+  bool parseBody(HttpClient &client);
+  std::string getWriteData(char *buffer, std::string boundary);
   // parsing functions for request line
   bool validMethod(HttpClient &client, const std::string &method);
   bool isAllowedURICharacter(char ch);
@@ -54,4 +54,3 @@ public:
 
 unsigned long hexToULong(const std::string &hexStr);
 #endif
-

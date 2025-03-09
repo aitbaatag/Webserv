@@ -47,7 +47,7 @@ struct Request {
   std::string filename;
   std::string currentHeader;
   std::string currentData;
-  int body_read;
+  int body_read = 0;
   std::ofstream fileStream;
   std::ifstream tmpFileStream;
 };

@@ -7,4 +7,5 @@ StateMachine::StateMachine() {
   stateStructuredField = STATE_START;
   stateMultipart = START;
   statechunk = STATE_CHUNK_SIZE;
+  bodyType = START_;
 }

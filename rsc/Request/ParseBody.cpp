@@ -1,5 +1,7 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include "../../Includes/Http_Req_Res/StateMachine.hpp"
+#include <iostream>
+#include <string>
 
 bool HttpRequest::parseChunkedBody(HttpClient &client) {
   std::string reqBuff = client.get_request_buffer();
@@ -87,12 +89,9 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
   return true;
 }
 
-bool HttpRequest::MultipartBody(HttpClient &client) {
+bool HttpRequest::StorMultipartBody(HttpClient &client) {
   std::string reqBuff = client.get_request_buffer();
 
-  // strore the body in a temp temp_file_fd and check if the body is Complete
-  std::cout << "--------------------- storing body in temp temp_file_fd "
-            << client.Srequest.temp_file_fd << std::endl;
   if (client.Srequest.body_read < client.Srequest.body_length) {
     size_t pos = client.get_pos();
     size_t body_length = client.Srequest.body_length;
@@ -101,7 +100,6 @@ bool HttpRequest::MultipartBody(HttpClient &client) {
     if (to_read > reqBuff.length() - pos) {
       to_read = reqBuff.length() - pos;
     }
-    std::cout << reqBuff << std::endl;
     write(client.Srequest.temp_file_fd, reqBuff.c_str() + pos, to_read);
     client.Srequest.body_read += to_read;
     pos += to_read;
@@ -109,8 +107,7 @@ bool HttpRequest::MultipartBody(HttpClient &client) {
   }
 
   if (client.Srequest.body_read == client.Srequest.body_length) {
-    client.set_request_status(Complete);
-    return true;
+    return (parseBody(client));
   }
   return false;
 }
@@ -118,7 +115,8 @@ bool HttpRequest::MultipartBody(HttpClient &client) {
 bool HttpRequest::parseBody(HttpClient &client) {
   const size_t CHUNK_SIZE = 16384; // 16KB
   char buffer[CHUNK_SIZE];
-
+  char *buffer_ = buffer;
+  bool true_ = true;
   if (!client.Srequest.tmpFileStream.is_open()) {
     client.Srequest.tmpFileStream.open(".temp_file",
                                        std::ios::in | std::ios::binary);
@@ -132,7 +130,7 @@ bool HttpRequest::parseBody(HttpClient &client) {
 
   client.Srequest.tmpFileStream.read(buffer, CHUNK_SIZE);
   std::streamsize bytesRead = client.Srequest.tmpFileStream.gcount();
-
+  buffer[bytesRead] = '\0';
   if (bytesRead <= 0) {
     // End of file or error
     client.Srequest.tmpFileStream.close();
@@ -140,86 +138,89 @@ bool HttpRequest::parseBody(HttpClient &client) {
     return true;
   }
 
-  switch (client.SMrequest.stateMultipart) {
-  case START: {
-    std::string boundary = "--" + client.Srequest.boundary;
-    std::string chunk(buffer, bytesRead);
+  while (true_) {
+    switch (client.SMrequest.stateMultipart) {
+    case START: {
+      std::cout << "Start" << std::endl;
+      std::string boundary = "--" + client.Srequest.boundary;
+      std::string chunk(buffer, bytesRead);
 
-    size_t boundaryPos = chunk.find(boundary);
-    if (boundaryPos == std::string::npos) {
-      std::cerr << "Boundary not found" << std::endl;
-      client.Srequest.error_status = 400; // Bad Request
-      client.set_request_status(Failed);
-      client.Srequest.tmpFileStream.close();
-      return false;
-    }
-
-    client.SMrequest.stateMultipart = HEADERS;
-    client.Srequest.tmpFileStream.seekg(boundaryPos + boundary.length(),
-                                        std::ios::beg);
-    break;
-  }
-
-  case HEADERS: {
-    std::string headers;
-    char c;
-    while (client.Srequest.tmpFileStream.get(c)) {
-      headers += c;
-      if (headers.length() >= 4 &&
-          headers.substr(headers.length() - 4) == "\r\n\r\n") {
-        break; // End of headers
+      size_t boundaryPos = chunk.find(boundary);
+      if (boundaryPos == std::string::npos) {
+        std::cerr << "Boundary not found" << std::endl;
+        client.Srequest.error_status = 400; // Bad Request
+        client.set_request_status(Failed);
+        client.Srequest.tmpFileStream.close();
+        return false;
       }
+
+      client.SMrequest.stateMultipart = HEADERS;
+      break;
     }
 
-    size_t filenamePos = headers.find("filename=\"");
-    if (filenamePos != std::string::npos) {
-      filenamePos += 10;
-      size_t filenameEnd = headers.find("\"", filenamePos);
-      client.Srequest.filename =
-          headers.substr(filenamePos, filenameEnd - filenamePos);
+    case HEADERS: {
+      std::cout << "Headers" << std::endl;
+      std::string headers;
+      char c;
+      int i = 0;
+      while (true) {
+        headers += buffer[i++];
+        if (headers.length() >= 4 &&
+            headers.substr(headers.length() - 4) == "\r\n\r\n") {
+          break; // End of headers
+        }
+      }
+
+      size_t filenamePos = headers.find("filename=\"");
+      if (filenamePos != std::string::npos) {
+        filenamePos += 10;
+        size_t filenameEnd = headers.find("\"", filenamePos);
+        client.Srequest.filename =
+            headers.substr(filenamePos, filenameEnd - filenamePos);
+      }
+      client.Srequest.fileStream.open(client.Srequest.filename,
+                                      std::ios::out | std::ios::binary);
+      if (!client.Srequest.fileStream) {
+        std::cerr << "Failed to create file: " << client.Srequest.filename
+                  << std::endl;
+        client.Srequest.error_status = 500; // Internal Server Error
+        client.set_request_status(Failed);
+        client.Srequest.tmpFileStream.close();
+        return false;
+      }
+      buffer_ += i;
+      client.SMrequest.stateMultipart = DATA;
+      break;
     }
 
-    client.Srequest.fileStream.open(client.Srequest.filename,
-                                    std::ios::out | std::ios::binary);
-    if (!client.Srequest.fileStream) {
-      std::cerr << "Failed to create file: " << client.Srequest.filename
-                << std::endl;
-      client.Srequest.error_status = 500; // Internal Server Error
-      client.set_request_status(Failed);
-      client.Srequest.tmpFileStream.close();
-      return false;
+    case DATA: {
+      std::cout << "Data" << std::endl;
+      // check if buffer contains the boundary
+      std::string writeData = getWriteData(buffer_, client.Srequest.boundary);
+      client.Srequest.fileStream.write(writeData.c_str(), writeData.length());
+      if (!client.Srequest.fileStream) {
+        std::cerr << "Failed to write to file: " << client.Srequest.filename
+                  << std::endl;
+        client.Srequest.error_status = 500; // Internal Server Error
+        client.set_request_status(Failed);
+        client.Srequest.tmpFileStream.close();
+        client.Srequest.fileStream.close();
+        return false;
+      }
+      true_ = false;
+      break;
     }
-
-    client.SMrequest.stateMultipart = DATA;
-    break;
+    }
   }
-
-  case DATA: {
-    // Write data to the destination file
-    client.Srequest.fileStream.write(buffer, bytesRead);
-    if (!client.Srequest.fileStream) {
-      std::cerr << "Failed to write to file: " << client.Srequest.filename
-                << std::endl;
-      client.Srequest.error_status = 500; // Internal Server Error
-      client.set_request_status(Failed);
-      client.Srequest.tmpFileStream.close();
-      client.Srequest.fileStream.close();
-      return false;
-    }
-
-    std::string chunk(buffer, bytesRead);
-    std::string endBoundary = "--" + client.Srequest.boundary + "--";
-    if (chunk.find(endBoundary) != std::string::npos) {
-      client.Srequest.fileStream.close();
-      client.Srequest.tmpFileStream.close();
-      client.SMrequest.stateMultipart = START; // Reset for the next request
-      client.set_request_status(Complete);
-      return true;
-    }
-    break;
-  }
-    return false;
-  }
-
   return true;
+}
+
+std::string HttpRequest::getWriteData(char *buffer, std::string boundary) {
+  std::string endBoundary = "--" + boundary + "--";
+  std::string chunk(buffer);
+  size_t boundaryPos = chunk.find(endBoundary);
+  if (boundaryPos == std::string::npos) {
+    return chunk;
+  }
+  return chunk.substr(0, boundaryPos);
 }

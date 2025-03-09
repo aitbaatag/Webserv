@@ -37,9 +37,9 @@ int main() {
       "accept-language: en-US,en;q=0.5\r\n"
       "cache-control: max-age=0\r\n"
       "connection: keep-alive\r\n"
-      "content-length: 24978572\r\n"
-      "content-type: multipart/form-data; "
-      "boundary=----WebKitFormBoundaryewgKoIys71od9Vsi\r\n"
+      "Content-Length: 1300\r\n"
+      "Content-Type: multipart/form-data; "
+      "boundary=----We\r\n"
       "host: localhost:8081\r\n"
       "origin: http://localhost:8081\r\n"
       "referer: http://localhost:8081/home\r\n"
@@ -58,26 +58,36 @@ int main() {
       "\r\n";
 
   // bodu chunked
-  client2.request_buffer_ += "Transfer-Encoding: chunked\r\n";
+  //  client2.request_buffer_ += "Transfer-Encoding: chunked\r\n";
   client2.request_buffer_ += "\r\n";
   // chunked with hex size
   // client2.request_buffer_ +=
   //     "7\r\n{\"name\"\r\n8\r\n:\"John "
   //     "D\r\n6\r\noe\",\"a\r\n7\r\nge\":30,\r\n9\r\n\"email\":\"\r\n11\r\njohn@"
   //     "example.com\"\r\n1\r\n}\r\n0\r\n\r\n";
-  client2.request_buffer_ += "5\r\n";
-  client2.request_buffer_ += "Hello\r\n";
-  client2.request_buffer_ += "5\r\n";
-  client2.request_buffer_ += "World\r\n";
-  client2.request_buffer_ += "1\r\n";
-  client2.request_buffer_ += "!\r\n";
-  client2.request_buffer_ += "0\r\n";
-  client2.request_buffer_ += "\r\n";
-  req.parseIncrementally(client2);
-  req.printRequestLine(client2);
+  // client2.request_buffer_ += "5\r\n";
+  // client2.request_buffer_ += "Hello\r\n";
+  // client2.request_buffer_ += "5\r\n";
+  // client2.request_buffer_ += "World\r\n";
+  // client2.request_buffer_ += "1\r\n";
+  // client2.request_buffer_ += "!\r\n";
+  // client2.request_buffer_ += "0\r\n";
+  // client2.request_buffer_ += "\r\n";
 
-  // print map
-  for (auto const &[key, value] : client2.Srequest.headers) {
-    std::cout << "{" << key << ": " << value << "}\n";
-  }
+  // multipart
+  client2.request_buffer_ +=
+      "------We\r\n"
+      "Content-Disposition: form-data; name=\"file\"; "
+      "filename=\"file1.txt\"\r\n"
+      "Content-Type: text/plain\r\n"
+      "\r\n"
+      "Hello World! I am khalid how are you world I am here\r\n"
+      "------We--\r\n";
+  req.parseIncrementally(client2);
+  // req.printRequestLine(client2);
+  //
+  // // print map
+  // for (auto const &[key, value] : client2.Srequest.headers) {
+  //   std::cout << "{" << key << ": " << value << "}\n";
+  // }
 }

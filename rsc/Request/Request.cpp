@@ -73,7 +73,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
 void HttpRequest::parseIncrementally(HttpClient &client) {
   size_t pos = client.get_pos();
   std::string reqBuff = client.get_request_buffer();
-  while (client.get_pos() < reqBuff.length()) {
+  while (true) {
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
       std::cout << "Request Line" << std::endl;
@@ -85,39 +85,43 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
       if (!parseHeaders(client))
         return;
     case STATE_BODY: {
-      std::cout << "Body Type" << std::endl;
-      BodyType bodyType = determineBodyType(client.Srequest.headers);
-      if (bodyType == BodyType::MULTIPART || bodyType == BodyType::CHUNKED) {
-        client.Srequest.temp_file_fd =
-            open(".temp_file", O_CREAT | O_RDWR, 0666);
-      }
-      switch (bodyType) {
-      case BodyType::NO_BODY: {
-        std::cout << "NO_BODY" << std::endl;
-        client.set_request_status(Complete);
+      switch (client.SMrequest.bodyType) {
+      case START_: {
+        std::cout << "Start" << std::endl;
+        client.SMrequest.bodyType = determineBodyType(client.Srequest.headers);
+        if (client.SMrequest.bodyType == MULTIPART ||
+            client.SMrequest.bodyType == CHUNKED) {
+          client.Srequest.temp_file_fd =
+              open(".temp_file", O_CREAT | O_RDWR | O_TRUNC, 0666);
+        }
+        client.SMrequest.bodyType = NO_BODY;
         break;
       }
-      case BodyType::MULTIPART: {
-        std::cout << "MULTIPART" << std::endl;
-        if (!MultipartBody(client))
+      case NO_BODY: {
+        std::cout << "No Body" << std::endl;
+        client.SMrequest.state = STATE_COMPLETE;
+        break;
+      }
+      case MULTIPART: {
+        std::cout << "Multipart" << std::endl;
+        if (!StorMultipartBody(client))
           client.SMrequest.state = STATE_COMPLETE;
         else
           client.SMrequest.state = STATE_BODY;
         break;
       }
-      case BodyType::CHUNKED: {
-        std::cout << "CHUNKED" << std::endl;
+      case CHUNKED: {
+        std::cout << "Chunked" << std::endl;
         if (!parseChunkedBody(client))
           return;
         break;
       }
       }
+      break;
     }
     case STATE_COMPLETE:
       client.set_request_status(Complete);
-      client.SMrequest.state = STATE_COMPLETE;
       return;
-      break;
     }
   }
 }
@@ -133,4 +137,3 @@ void HttpRequest::printRequestLine(HttpClient &client) {
   //   std::cout << "{" << key << ": " << value << "}\n";
   // }
 }
-

@@ -63,6 +63,7 @@ int main() {
       if (ready_fd_count < 0)
         throw std::runtime_error("epoll_wait failed: " +
                                  std::string(strerror(errno)));
+
       processEpollEvents(ready_fd_count, events, clients, req, res);
     }
   } catch (const std::exception &e) {
@@ -72,4 +73,3 @@ int main() {
 
   return 0;
 }
-
