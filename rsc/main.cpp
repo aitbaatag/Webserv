@@ -28,18 +28,20 @@ void processEpollEvents(int ready_fd_count, struct epoll_event *events,
     {
       if ((events[i].events & EPOLLIN) && clients[events[i].data.fd].get_request_status() == InProgress) {
         clients[events[i].data.fd].append_to_request();
-        req.parseIncrementally(clients[events[i].data.fd]);
+		  std::cout << clients[events[i].data.fd].request_buffer_;
+      //   req.parseIncrementally(clients[events[i].data.fd]);
+		  
       }
       
-      if ((events[i].events & EPOLLOUT) && clients[events[i].data.fd].get_request_status() == Complete) {
-        // req.printRequestLine(clients[events[i].data.fd]);
-        res.generateResponse(clients[events[i].data.fd], events[i].data.fd);
-        clients.erase(events[i].data.fd);
-      }
-      if (clients[events[i].data.fd].get_response_status() == Complete) {
-          close(events[i].data.fd);
-          std::cout << "Closed connection: client FD " << events[i].data.fd << std::endl;
-      }
+      // if ((events[i].events & EPOLLOUT) && clients[events[i].data.fd].get_request_status() == Complete) {
+      //   // req.printRequestLine(clients[events[i].data.fd]);
+      //   res.generateResponse(clients[events[i].data.fd], events[i].data.fd);
+      //   clients.erase(events[i].data.fd);
+      // }
+      // if (clients[events[i].data.fd].get_response_status() == Complete) {
+      //     close(events[i].data.fd);
+      //     std::cout << "Closed connection: client FD " << events[i].data.fd << std::endl;
+      // }
     }
   }
 }

@@ -74,7 +74,7 @@ void Response::setBody() {
     }
     else {
         setStatus(404);
-        _filePath = "www/404.html";
+        _filePath = "rsc/response_cgi/www/404.html";
         setBody();
     }
 }
@@ -91,7 +91,7 @@ void Response::handleFileRequest() {
     }
     else {
         setStatus(404);
-        _filePath = "www/404.html";
+        _filePath = "rsc/response_cgi/www/404.html";
         setBody();
     }
 }
@@ -102,15 +102,15 @@ void Response::generateResponse(HttpClient &client, int fd) {
             std::cout << "GET request received" << std::endl;
             if (client.Srequest.path == "/cgi-bin/logged") {
                 std::cout << "CGI request received" << std::endl;
-                _filePath = "www/logged.py";
+                _filePath = "rsc/response_cgi/www/logged.py";
                 handleCGIRequest();
             }
             else {
                 if (client.Srequest.path == "/") {
-                    _filePath = "www/index.html";
+                    _filePath = "rsc/response_cgi/www/index.html";
                 }
                 else {
-                    _filePath = "www" + client.Srequest.path;
+                    _filePath = "rsc/response_cgi/www" + client.Srequest.path;
                 }
                 handleFileRequest();
             }
