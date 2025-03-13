@@ -2,25 +2,11 @@
 #ifndef HTTP_CLIENT_HPP
 #define HTTP_CLIENT_HPP
 
-#include "../../Includes/Http_Req_Res/StateMachine.hpp"
-#include <arpa/inet.h>
-#include <cerrno>
-#include <cstring>
-#include <fcntl.h>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <netinet/in.h>
-#include <sstream>
-#include <string>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#define MAX_EVENTS 10
-#define MAX_RECV 16000
+#include "../Http_Req_Res/StateMachine.hpp"
+#include "../libraries/Libraries.hpp"
 
 // Content-Type: text/html; charset=UTF-8; version=1.0
-enum Status { InProgress, Complete, Failed };
+enum Status { InProgress, Complete, Failed, Disc };
 struct Request {
   std::string method = "";
   std::string uri = "";
@@ -43,14 +29,18 @@ struct Request {
   std::string Content_Type;
   int error_status = 0; // the error status of the request
   int temp_file_fd;
+  int file_fd;
   std::string filename;
   std::string currentHeader;
   std::string currentData;
-  int body_read;
+  int body_read = 0;
+  std::ofstream fileStream;
+  std::ifstream tmpFileStream;
 };
 class HttpClient {
 public:
   int socket_fd_;
+  std::string client_ip; 
   std::string request_buffer_;
   std::string response_buffer_;
   Status request_status_;

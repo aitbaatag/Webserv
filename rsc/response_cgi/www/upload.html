@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f8ff;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .container {
+            max-width: 400px;
+            padding: 40px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 123, 255, 0.1);
+            z-index: 10;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .title {
+            font-size: 36px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+
+        .description {
+            font-size: 18px;
+            color: #555;
+            line-height: 1.6;
+            animation: slideInLeft 0.8s ease-out;
+            margin-bottom: 20px;
+        }
+
+        .upload-form {
+            margin-top: 20px;
+        }
+
+        .file-input {
+            padding: 10px;
+            font-size: 16px;
+            background-color: #fff;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            width: 100%;
+            color: #333;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        .file-input:hover {
+            border-color: #0056b3;
+        }
+
+        .submit-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .submit-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .go-back {
+            display: block;
+            margin-top: 20px;
+            text-decoration: underline;
+            color: #007bff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Upload Your File</h1>
+        <p class="description">
+            Select a file to upload and click the button below to submit your file.
+        </p>
+        <div class="upload-form">
+            <form action="/submit-upload" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" class="file-input" required />
+                <br>
+                <button type="submit" class="submit-button">Upload File</button>
+            </form>
+        </div>
+        <a href="/cgi-bin/logged" class="go-back">Go Back</a>
+    </div>
+</body>
+</html>
