@@ -95,7 +95,7 @@ void ServerConfigParser::parseServer(std::vector<std::string> &lineTokens, std::
 	insideServerBlock_ = true;
 	if (lineTokens.size() > 1 && lineTokens[idx + 1] != "{")
 		throw std::runtime_error("Syntax Error: 'server' block must start with '{'.");
-	servers_.push_back(Server());
+	servers_.push_back(ServerConfig());
 }
 
 void ServerConfigParser::parseListen(std::vector<std::string > &lineTokens, std::size_t &idx)
@@ -116,7 +116,7 @@ void ServerConfigParser::parseListen(std::vector<std::string > &lineTokens, std:
 		throw std::runtime_error("Syntax Error: Invalid port: 'listen' Must be in range 1-65535.");
 	if (lineTokens[idx + 2] != ";")
 		throw std::runtime_error("Syntax Error: 'listen' Missing ';' after port number.");
-	Server& current_server = servers_.back();
+	ServerConfig& current_server = servers_.back();
 	if (current_server.Tracker.has_port == true)
 		throw std::runtime_error("Syntax Error: Multiple 'listen' directives detected in configuration");
 	current_server.port = port;
@@ -131,7 +131,7 @@ void  ServerConfigParser::parseHost(std::vector<std::string> &lineTokens, std::s
 	if (lineTokens[idx + 2] != ";")
 		throw std::runtime_error("Syntax Error: 'host' Missing ';' after Host type.");	
 
-	Server& current_server = servers_.back();
+	ServerConfig& current_server = servers_.back();
 	if (current_server.Tracker.has_host == true)
 		throw std::runtime_error("Syntax Error: Multiple 'host' directives detected in configuration");
 	current_server.host = lineTokens[idx + 1];
@@ -191,7 +191,7 @@ void ServerConfigParser::parseServerName(std::vector<std::string > &lineTokens, 
 	if (idx >= lineTokens.size() || lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: Missing ';' in server_name");
 	
-	Server& current_server = servers_.back();
+	ServerConfig& current_server = servers_.back();
 	if (!current_server.server_names.empty())
 		throw std::runtime_error("Syntax Error: Multiple 'server_name' directives detected in configuration");
 	for (int i = 0; i < server_names.size(); i++)
@@ -240,7 +240,7 @@ void ServerConfigParser::parseMaxBodySize(std::vector<std::string > &lineTokens,
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: Missing ';' in 'max_body_size' directive.");
-	Server &current_server = servers_.back();
+	ServerConfig &current_server = servers_.back();
 	if (current_server.Tracker.has_max_body_size)
 		throw std::runtime_error("Syntax Error: Multiple 'max_body_size' directives detected in configuration");
 	current_server.max_body_size = result;
@@ -278,7 +278,7 @@ void ServerConfigParser::parseErrorPage(std::vector<std::string > &lineTokens, s
 	idx++;
 	if (lineTokens[idx] != ";")
 		throw std::runtime_error("Syntax Error: 'error_page' directive must end with a semicolon.");
-	Server& current_server = servers_.back();
+	ServerConfig& current_server = servers_.back();
 	current_server.error_page[std::to_string(statusCode)] = 	filePath;
 }
 
@@ -698,7 +698,7 @@ Route::Route()
 
 }
 
-Server::Server()
+ServerConfig::ServerConfig()
 {
 	port = -1;
 	host = "";

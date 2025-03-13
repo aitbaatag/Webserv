@@ -1,6 +1,9 @@
 #ifndef LIBRARIES_HPP
 # define LIBRARIES_HPP
 
+#define MAX_EVENTS 10
+#define MAX_RECV 5048
+
 #include <cstddef>
 #include <stdexcept>
 #include <ctime>
@@ -25,11 +28,10 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
-
-
-
-
-#define MAX_EVENTS 10
-#define MAX_RECV 2048
+#include <stdio.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 #endif

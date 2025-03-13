@@ -60,7 +60,7 @@ struct Route
 
 
 // Represents a server block
-struct Server
+struct ServerConfig
 {
 	int port;
 	std::string host;
@@ -70,7 +70,7 @@ struct Server
 	std::size_t max_body_size;
 	std::vector<Route> routes;
 	ServerFoundDirective Tracker;
-	Server();
+	ServerConfig();
 };
 
 
@@ -87,7 +87,7 @@ class ServerConfigParser {
 		int closingBraceCount_;
 		bool insideServerBlock_;
 		bool insideRouteBlock_;
-		std::vector<Server> servers_;
+		std::vector<ServerConfig> servers_;
 	public:
 		
 		// contructor & deconstructor & public func
@@ -124,6 +124,9 @@ class ServerConfigParser {
 		void parseUploadDir(std::vector<std::string> &lineTokens, std::size_t &idx);           // Parse "upload_dir" directive @route
 		void parseRedirect(std::vector<std::string> &lineTokens, std::size_t &idx);           // Parse "upload_dir" directive @route
 
+		// Return Servers
+		std::vector<ServerConfig> &getServers() {return servers_;};
+	
 		// Beautiful printer function
 		void printServers() const;
 };

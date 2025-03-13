@@ -14,17 +14,25 @@ Status HttpClient::get_request_status() { return request_status_; }
 
 Status HttpClient::get_response_status() { return response_status_; }
 
-void HttpClient::append_to_request() {
-  char buffer[MAX_RECV] = {};
-
-  size_t bytes_received = recv(socket_fd_, buffer, MAX_RECV - 1, 0);
-  if (bytes_received < 0)
-    throw std::runtime_error(std::string("recv failed: ") + strerror(errno));
-  else if (bytes_received == 0)
-    return;
-  buffer[bytes_received] = '\0';
-  request_buffer_ += buffer;
+void HttpClient::append_to_request()
+{
+	char buffer[MAX_RECV] = {};
+	ssize_t bytes_received = recv(socket_fd_, buffer, MAX_RECV - 1, 0);
+	if (bytes_received == 0)
+	{
+		request_status_ = Disc;
+		return ;
+	}
+	else if (bytes_received < 0)
+	{
+		// wait no data avaible
+		return;
+	}
+	buffer[bytes_received] = '\0';
+	request_buffer_ += buffer;
+	// std::cout << request_buffer_ << std::endl;
 }
+
 
 void HttpClient::registerEpollEvents(int epoll_fd_) {
   epoll_event ev;

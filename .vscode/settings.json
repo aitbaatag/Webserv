@@ -55,6 +55,7 @@
 		"new": "cpp",
 		"numbers": "cpp",
 		"ostream": "cpp",
+		"ranges": "cpp",
 		"semaphore": "cpp",
 		"span": "cpp",
 		"sstream": "cpp",
@@ -67,6 +68,7 @@
 		"cinttypes": "cpp",
 		"typeinfo": "cpp",
 		"valarray": "cpp",
-		"variant": "cpp"
+		"variant": "cpp",
+		"cerrno": "cpp"
 	}
 }

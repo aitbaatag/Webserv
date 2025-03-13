@@ -1,7 +1,7 @@
 #include "../../Includes/server/server_socket.hpp"
 
 
-void ServerSocket::initialize_socket(int port)
+void ServerSocket::initialize_socket()
 {
 	socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
 	if (socket_fd_ < 0)
@@ -14,7 +14,7 @@ void ServerSocket::initialize_socket(int port)
 		return;
 	}
 	server_address_.sin_family = AF_INET;
-	server_address_.sin_port = htons(port);
+	server_address_.sin_port = htons(server_port_);
 	server_address_.sin_addr.s_addr = htonl(INADDR_ANY);
 }
 
@@ -36,19 +36,6 @@ void ServerSocket::set_non_blocking()
 		throw std::runtime_error("Failed to set socket to non-blocking: " + std::string(strerror(errno)));
 }
 
-int ServerSocket::get_socket_fd()
-{
-	return socket_fd_;
-}
-
-ServerSocket::ServerSocket(int port): socket_fd_(-1), epoll_fd_(-1)
-{
-	initialize_socket(port);
-	bind_socket();
-	listen_for_connections();
-	set_non_blocking();
-	std::cout << "Server is listening on port " << port << std::endl;
-}
 
 ServerSocket::~ServerSocket()
 {
@@ -56,25 +43,34 @@ ServerSocket::~ServerSocket()
 		close(socket_fd_);
 }
 
-int ServerSocket::accept_connection()
+ClientConnectionInfo ServerSocket::accept_connection()
 {
-	int client_socket = accept(socket_fd_, NULL, NULL);
-	if (client_socket < 0)
+	sockaddr_in client_addr;
+	ClientConnectionInfo client;
+   socklen_t client_len;
+	client_len = sizeof(client_addr);
+	
+	client.client_socket = accept(socket_fd_, (sockaddr *)&client_addr, &client_len);
+	if (client.client_socket < 0)
 	{
 		if (errno != EAGAIN && errno != EWOULDBLOCK)
 			throw std::runtime_error("Accept error: " + std::string(strerror(errno)));
 		else
-			return -1;
+		{
+			client.client_socket = -1;
+			return client;
+		}
 	}
 	else
 	{
-		if (fcntl(client_socket, F_SETFL, O_NONBLOCK) < 0)
+		if (fcntl(client.client_socket, F_SETFL, O_NONBLOCK) < 0)
 		{
-			close(client_socket);
+			close(client.client_socket);
 			throw std::runtime_error("Failed to set client socket to non-blocking");
 		}
 	}
-	return client_socket;
+	inet_ntop(AF_INET, &(client_addr.sin_addr), client.client_ip, INET_ADDRSTRLEN);
+	return client;
 }
 
 void ServerSocket::createEpollInstance() {
@@ -87,9 +83,76 @@ void ServerSocket::createEpollInstance() {
 	}
 }
 
-int ServerSocket::getEpollInstanceFd() {
-	if (epoll_fd_ == -1) {
-		throw std::runtime_error("Epoll instance not created");
+void ServerSocket::handleClientDisconnection(int client_fd)
+{
+	if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL) == -1)
+		perror("Failed to remove client from epoll");
+	std::map<int, HttpClient>::iterator it = clients_.find(client_fd);
+	if (it != clients_.end())
+		clients_.erase(it);
+	close(client_fd);
+}
+
+ServerSocket::ServerSocket()
+{
+	socket_fd_ = -1;
+	epoll_fd_ = -1;
+	server_port_ = -1;
+}
+
+void ServerSocket::startServer()
+{
+	initialize_socket();
+	bind_socket();
+	listen_for_connections();
+	set_non_blocking();
+	createEpollInstance();
+}
+
+void ServerSocket::setupServerPort()
+{
+	if (serverConfig_.size() != 0)
+		server_port_ = serverConfig_[0].port;
+}
+
+void ServerSocket::processEpollEvents(int ready_fd_count)
+{
+	for (int i = 0; i < ready_fd_count; i++)
+	{
+		{
+			if ((events[i].events &EPOLLIN) &&
+				clients_[events[i].data.fd].get_request_status() == InProgress)
+			{
+				clients_[events[i].data.fd].append_to_request();
+				req.parseIncrementally(clients_[events[i].data.fd]);
+			}
+
+			if ((events[i].events &EPOLLOUT) &&
+				clients_[events[i].data.fd].get_request_status() == Complete)
+			{
+				res.generateResponse(clients_[events[i].data.fd], events[i].data.fd);
+				if (clients_[events[i].data.fd].get_response_status() == Complete)
+				{
+					clients_.erase(events[i].data.fd);
+					close(events[i].data.fd);
+				}
+			}
+		}
 	}
-	return epoll_fd_;
+}
+
+
+void ServerSocket::handleClientConnection()
+{
+	ClientConnectionInfo client = accept_connection();
+	if (client.client_socket > 0)
+	{
+		clients_[client.client_socket] = HttpClient(client.client_socket);
+		clients_[client.client_socket].client_ip = client.client_ip;
+		clients_[client.client_socket].registerEpollEvents(epoll_fd_);
+	}
+	int ready_fd_count = epoll_wait(epoll_fd_, events, MAX_EVENTS, 0);
+	if (ready_fd_count < 0)
+		throw std::runtime_error("epoll_wait failed: " + std::string(strerror(errno)));
+	processEpollEvents(ready_fd_count);
 }

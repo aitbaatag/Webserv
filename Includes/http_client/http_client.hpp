@@ -7,7 +7,7 @@
 
 
 // Content-Type: text/html; charset=UTF-8; version=1.0
-enum Status { InProgress, Complete, Failed };
+enum Status { InProgress, Complete, Failed, Disc };
 struct Request {
   std::string method;
   std::string uri;
@@ -31,6 +31,7 @@ struct Request {
 class HttpClient {
 public:
   int socket_fd_;
+  std::string client_ip;
   std::string request_buffer_;
   std::string response_buffer_;
   Status request_status_;
