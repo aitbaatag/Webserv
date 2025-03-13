@@ -24,6 +24,11 @@ void HttpClient::append_to_request() {
     return;
   buffer[bytes_received] = '\0';
   request_buffer_ += buffer;
+
+  int fd = open("Req_file", O_CREAT | O_RDWR | O_APPEND, 0666);
+
+  write(fd, buffer, bytes_received);
+
   // std::cout << "read from client: " << socket_fd_ << " => " <<
   // request_buffer_
   //           << std::endl;

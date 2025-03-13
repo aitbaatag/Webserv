@@ -27,7 +27,8 @@ private:
   void parseChunkData(HttpClient &client);
   void parseChunkEnd(HttpClient &client);
   bool parseBody(HttpClient &client);
-  std::string getWriteData(char *buffer, std::string boundary);
+  std::string getWriteData(std::string buffer, std::string boundary,
+                           HttpClient &client);
   // parsing functions for request line
   bool validMethod(HttpClient &client, const std::string &method);
   bool isAllowedURICharacter(char ch);

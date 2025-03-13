@@ -92,9 +92,8 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
         if (client.SMrequest.bodyType == MULTIPART ||
             client.SMrequest.bodyType == CHUNKED) {
           client.Srequest.temp_file_fd =
-              open(".temp_file", O_CREAT | O_RDWR | O_TRUNC, 0666);
+              open(".temp_file", O_CREAT | O_RDWR | O_APPEND, 0666);
         }
-        client.SMrequest.bodyType = NO_BODY;
         break;
       }
       case NO_BODY: {

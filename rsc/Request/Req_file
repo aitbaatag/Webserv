@@ -1,0 +1,104 @@
+------WebKitFormBoundaryNkela6rATg0qs5EL\r\n
+Content-Disposition: form-data; name="username"\r\n\r\n
+asdfsdaf\r\n
+------WebKitFormBoundaryNkela6rATg0qs5EL\r\n
+Content-Disposition: form-data; name="password"\r\n\r\n
+asdfasdfds\r\n
+------WebKitFormBoundaryNkela6rATg0qs5EL\r\n
+Content-Disposition: form-data; name="file"; filename="file"\r\n
+Content-Type: application/octet-stream\r\n\r\n
+
+
+
+Hello\r\n
+------WebKitFormBoundaryNkela6rATg0qs5EL--\r\n'
+GET /404 HTTP/1.1
+Host: localhost:8081
+Connection: keep-alive
+sec-ch-ua: "Chromium";v="134", "Not:A-Brand";v="24", "Brave";v="134"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Linux"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8
+Sec-GPC: 1
+Accept-Language: en-US,en;q=0.7
+Sec-Fetch-Site: none
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Accept-Encoding: gzip, deflate, br, zstd
+
+GET /favicon.ico HTTP/1.1
+Host: localhost:8081
+Connection: keep-alive
+sec-ch-ua-platform: "Linux"
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
+sec-ch-ua: "Chromium";v="134", "Not:A-Brand";v="24", "Brave";v="134"
+sec-ch-ua-mobile: ?0
+Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8
+Sec-GPC: 1
+Accept-Language: en-US,en;q=0.7
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: no-cors
+Sec-Fetch-Dest: image
+Referer: http://localhost:8081/404
+Accept-Encoding: gzip, deflate, br, zstd
+
+GET / HTTP/1.1
+Host: localhost:8081
+Connection: keep-alive
+sec-ch-ua: "Chromium";v="134", "Not:A-Brand";v="24", "Brave";v="134"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Linux"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8
+Sec-GPC: 1
+Accept-Language: en-US,en;q=0.7
+Sec-Fetch-Site: none
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Accept-Encoding: gzip, deflate, br, zstd
+
+GET /home HTTP/1.1
+Host: localhost:8081
+Connection: keep-alive
+sec-ch-ua: "Chromium";v="134", "Not:A-Brand";v="24", "Brave";v="134"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Linux"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8
+Sec-GPC: 1
+Accept-Language: en-US,en;q=0.7
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: http://localhost:8081/
+Accept-Encoding: gzip, deflate, br, zstd
+
+POST /404 HTTP/1.1
+Host: localhost:8081
+Connection: keep-alive
+Content-Length: 403
+Cache-Control: max-age=0
+sec-ch-ua: "Chromium";v="134", "Not:A-Brand";v="24", "Brave";v="134"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Linux"
+Origin: http://localhost:8081
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryJhNAxe1Y00pktLOR
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8
+Sec-GPC: 1
+Accept-Language: en-US,en;q=0.7
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: http://localhost:8081/home
+Accept-Encoding: gzip, deflate, br, zstd
+

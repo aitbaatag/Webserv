@@ -28,6 +28,9 @@ void processEpollEvents(int ready_fd_count, struct epoll_event *events,
       if ((events[i].events & EPOLLIN) &&
           clients[events[i].data.fd].get_request_status() == InProgress) {
         clients[events[i].data.fd].append_to_request();
+        std::cout << "------------------------------------------" << std::endl;
+        std::cout << clients[events[i].data.fd].get_request_buffer()
+                  << std::endl;
         req.parseIncrementally(clients[events[i].data.fd]);
       }
 

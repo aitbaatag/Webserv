@@ -22,12 +22,11 @@ enum StateChunk {
   STATE_CHUNK_CRLF
 };
 enum MultipartState {
-  START,
-  OPEN_BOUNDARY,
-  CLOSE_BOUNDARY,
   HEADERS,
   DATA,
-  CREATE_FILE,
+  CREATEFILE,
+  OPEN_BOUNDARY,
+  CLOSE_BOUNDARY,
   END_BOUNDARY
 };
 enum StateStructuredField {
