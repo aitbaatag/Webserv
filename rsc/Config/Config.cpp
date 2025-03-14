@@ -656,7 +656,7 @@ void ServerConfigParser::validate_config()
 {
 	std::map<std::string, int> server_name_tracker;
 	std::ostringstream oss_error;
-	for (int i = 0; i < static_cast<int>(servers_.size()); ++i)
+	for (int i = 0; i <static_cast<int>(servers_.size()); ++i)
 	{
 		if (!servers_[i].Tracker.has_port)
 			throw std::runtime_error("[EMERG] Error: missing port for server number: " + i);

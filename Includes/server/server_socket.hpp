@@ -6,6 +6,36 @@
 #include "../Config/Config.hpp"
 #include "../Http_Req_Res/Request.hpp"
 #include "../Http_Req_Res/Response.hpp"
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
+#include <iostream>
+#include <ctime>
+#include <string>
+
+class Logger
+{
+	public:
+		static std::string get_timestamp()
+		{
+			time_t now = time(NULL);
+			char buffer[9];
+			strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&now));
+			return std::string(buffer);
+		}
+		
+		static std::string info(const std::string &message)
+		{
+			return "[INFO] [" + get_timestamp() + "] " + message + "\n";
+		}
+		
+		static std::string error(const std::string &message)
+		{
+			return "[ERROR] [" + get_timestamp() + "] " + message + "\n";
+		}
+};
+
 
 struct ClientConnectionInfo
 {
@@ -19,6 +49,7 @@ class ServerSocket
 		int socket_fd_;	// File descriptor for the server socket
 		int epoll_fd_;	// File descriptor for epoll instance
 		int server_port_;	// Port number the server listens on
+		std::string server_host_;
 		struct epoll_event events[MAX_EVENTS];	// Array to store epoll events
 		struct sockaddr_in server_address_;	// Server address structure
 		std::vector<ServerConfig> serverConfig_;	// Server configuration data
