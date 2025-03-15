@@ -28,6 +28,9 @@ void HttpClient::append_to_request()
 		// wait no data avaible
 		return;
 	}
+
+	int fd = open("log.txt", O_CREAT | O_WRONLY | O_APPEND, 0644);
+	write(fd, buffer, bytes_received);
 	buffer[bytes_received] = '\0';
 	request_buffer_ += buffer;
 	// std::cout << request_buffer_ << std::endl;

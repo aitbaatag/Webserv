@@ -124,7 +124,7 @@ void ServerSocket::processEpollEvents(int ready_fd_count)
 				clients_[events[i].data.fd].get_request_status() == InProgress)
 			{
 				clients_[events[i].data.fd].append_to_request();
-				req.parseIncrementally(clients_[events[i].data.fd]);
+				// req.parseIncrementally(clients_[events[i].data.fd]);
 			}
 
 			if ((events[i].events &EPOLLOUT) &&
