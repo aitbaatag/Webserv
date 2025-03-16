@@ -1,4 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
+#include <ios>
 #include <iostream>
 HttpRequest::HttpRequest() {}
 bool HttpRequest::parseRequestLine(HttpClient &client) {
@@ -8,6 +9,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
     char c = reqBuff[pos];
     switch (client.SMrequest.stateRequestLine) {
     case STATE_METHOD:
+      std::cout << "Method" << std::endl;
       if (c == ' ') {
         if (!validMethod(client, client.Srequest.method)) {
           client.Srequest.error_status = 405; // Method Not Allowed
@@ -21,6 +23,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
       }
       break;
     case STATE_URI:
+      std::cout << "URI" << std::endl;
       if (c == ' ') {
         if (client.Srequest.uri[0] != '/' || !isValidURI(client.Srequest.uri)) {
           client.Srequest.error_status = 404; // Not Found
@@ -37,6 +40,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
       }
       break;
     case STATE_VERSION:
+      std::cout << "Version" << std::endl;
       if (c == '\r') {
         if (!validHttpVersion(client.Srequest.version)) {
           client.Srequest.error_status = 505; // HTTP Version Not Supported
@@ -51,9 +55,12 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
       }
       break;
     case STATE_CRLF:
+      std::cout << "CRLF" << std::endl;
       if (c == '\n') {
         client.SMrequest.state = STATE_HEADERS;
-        pos++; // Skip the '\n'
+        if (reqBuff[pos] == '\n') {
+          pos++; // Skip the '\n'
+        }
         client.update_pos(pos);
         return true; // Successfully parsed the request line
       } else {
@@ -67,23 +74,25 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
     pos++;
     client.update_pos(pos);
   }
-  return true;
+  return false;
 }
 
 void HttpRequest::parseIncrementally(HttpClient &client) {
-  size_t pos = client.get_pos();
-  std::string reqBuff = client.get_request_buffer();
   while (true) {
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
       std::cout << "Request Line" << std::endl;
-      if (!parseRequestLine(client))
+      if (!parseRequestLine(client)) {
+        client.update_pos(0);
         return;
+      }
       break;
     case STATE_HEADERS:
       std::cout << "Headers" << std::endl;
-      if (!parseHeaders(client))
+      if (!parseHeaders(client)) {
+        client.update_pos(0);
         return;
+      }
     case STATE_BODY: {
       switch (client.SMrequest.bodyType) {
       case START_: {
@@ -91,8 +100,17 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
         client.SMrequest.bodyType = determineBodyType(client.Srequest.headers);
         if (client.SMrequest.bodyType == MULTIPART ||
             client.SMrequest.bodyType == CHUNKED) {
-          client.Srequest.temp_file_fd =
-              open(".temp_file", O_CREAT | O_RDWR | O_APPEND, 0666);
+          if (!client.Srequest.tmpFileStream.is_open()) {
+            client.Srequest.tmpFileStream.open(
+                ".temp_file_" + std::to_string(client.get_socket_fd()) + ".txt",
+                std::ios::app | std::ios::binary);
+            if (!client.Srequest.tmpFileStream.is_open()) {
+              std::cerr << "Failed to open temp file" << std::endl;
+              client.Srequest.error_status = 500; // Internal Server Error
+              client.set_request_status(Failed);
+              return;
+            }
+          }
         }
         break;
       }
@@ -102,11 +120,13 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
         break;
       }
       case MULTIPART: {
-        std::cout << "Multipart" << std::endl;
         if (!StorMultipartBody(client))
           client.SMrequest.state = STATE_COMPLETE;
-        else
+        else {
           client.SMrequest.state = STATE_BODY;
+          client.update_pos(0);
+          return;
+        }
         break;
       }
       case CHUNKED: {

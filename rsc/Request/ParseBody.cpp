@@ -47,8 +47,9 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
     case STATE_CHUNK_CRLF:
       if (c == '\n') {
         // store data in temp temp_file_fd
-        write(client.Srequest.temp_file_fd, client.Srequest.chunkData.c_str(),
-              client.Srequest.chunkData.length());
+        // write(client.Srequest.temp_file_fd,
+        // client.Srequest.chunkData.c_str(),
+        //       client.Srequest.chunkData.length());
         client.Srequest.chunkData.clear();
         client.SMrequest.statechunk = STATE_CHUNK_SIZE;
       } else {
@@ -91,21 +92,34 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
 }
 
 bool HttpRequest::StorMultipartBody(HttpClient &client) {
-  std::string reqBuff = client.get_request_buffer();
-
-  std::cout << "--------------------------Storing Multipart Body--------------"
-            << std::endl;
+  char *reqBuff = client.get_request_buffer() + client.get_pos();
   if (client.Srequest.body_read < client.Srequest.body_length) {
     size_t pos = client.get_pos();
     size_t body_length = client.Srequest.body_length;
     size_t body_read = client.Srequest.body_read;
     size_t to_read = body_length - body_read;
-    if (to_read > reqBuff.length() - pos) {
-      to_read = reqBuff.length() - pos;
+    if (to_read > client.bytes_received - pos) {
+      to_read = client.bytes_received - pos;
     }
-    write(client.Srequest.temp_file_fd, reqBuff.c_str() + pos, to_read);
-    client.Srequest.body_read += to_read;
+
+    // Check if the stream is valid and write the binary data
+    if (!client.Srequest.tmpFileStream) {
+      std::cerr << "File stream not valid before writing" << std::endl;
+      client.Srequest.error_status = 500; // Internal Server Error
+      client.set_request_status(Failed);
+      return false;
+    }
+    client.Srequest.tmpFileStream.write(reqBuff, to_read);
+    if (!client.Srequest.tmpFileStream) {
+      std::cerr << "Failed to write to temp file" << std::endl;
+      client.Srequest.error_status = 500; // Internal Server Error
+      client.set_request_status(Failed);
+      return false;
+    }
+
+    client.Srequest.tmpFileStream.flush();
     pos += to_read;
+    client.Srequest.body_read += to_read;
     client.update_pos(pos);
   }
 
@@ -113,7 +127,7 @@ bool HttpRequest::StorMultipartBody(HttpClient &client) {
     // return (parseBody(client));
     return false;
   }
-  return false;
+  return true;
 }
 
 bool HttpRequest::parseBody(HttpClient &client) {
