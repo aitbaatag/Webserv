@@ -36,12 +36,12 @@ struct Request {
   int body_read = 0;
   std::fstream fileStream;
   std::fstream tmpFileStream;
+  std::string tmpFilename;
 };
 class HttpClient {
 public:
   int socket_fd_;
   std::string client_ip;
-  std::string request_buffer_;
   char buffer[MAX_RECV] = {};
   size_t bytes_received;
   std::string response_buffer_;

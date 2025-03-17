@@ -25,9 +25,8 @@ void HttpClient::append_to_request() {
   }
 
   buffer[bytes_received] = '\0';
-  // poss += bytes_received;
-  std::ofstream file("request.txt", std::ios::app | std::ios::binary);
-  file.write(buffer, bytes_received);
+  // std::ofstream file("request.txt", std::ios::app);
+  // file.write(buffer, bytes_received);
   // std::cout << request_buffer_ << std::endl;
 }
 

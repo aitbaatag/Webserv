@@ -3,6 +3,7 @@
 
 #include "../http_client/http_client.hpp"
 #include "../libraries/Libraries.hpp"
+#include <cstddef>
 
 #define CRLF "\r\n"
 #define CRLFCRLF "\r\n\r\n"
@@ -25,8 +26,7 @@ private:
   void parseChunkData(HttpClient &client);
   void parseChunkEnd(HttpClient &client);
   bool parseBody(HttpClient &client);
-  std::string getWriteData(std::string buffer, std::string boundary,
-                           HttpClient &client);
+  size_t getWriteData(char *buffer, size_t buffer_size, HttpClient &client);
   // parsing functions for request line
   bool validMethod(HttpClient &client, const std::string &method);
   bool isAllowedURICharacter(char ch);

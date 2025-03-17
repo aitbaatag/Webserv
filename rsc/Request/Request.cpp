@@ -100,16 +100,16 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
         client.SMrequest.bodyType = determineBodyType(client.Srequest.headers);
         if (client.SMrequest.bodyType == MULTIPART ||
             client.SMrequest.bodyType == CHUNKED) {
+          client.Srequest.tmpFilename =
+              ".temp_file_" + std::to_string(client.get_socket_fd()) + ".txt";
+          client.Srequest.tmpFileStream.open(
+              client.Srequest.tmpFilename, std::ios::binary | std::ios::out |
+                                               std::ios::in | std::ios::trunc);
           if (!client.Srequest.tmpFileStream.is_open()) {
-            client.Srequest.tmpFileStream.open(
-                ".temp_file_" + std::to_string(client.get_socket_fd()) + ".txt",
-                std::ios::app | std::ios::binary);
-            if (!client.Srequest.tmpFileStream.is_open()) {
-              std::cerr << "Failed to open temp file" << std::endl;
-              client.Srequest.error_status = 500; // Internal Server Error
-              client.set_request_status(Failed);
-              return;
-            }
+            std::cerr << "Failed to open temp file" << std::endl;
+            client.Srequest.error_status = 500; // Internal Server Error
+            client.set_request_status(Failed);
+            return;
           }
         }
         break;
