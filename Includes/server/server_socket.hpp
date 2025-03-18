@@ -88,9 +88,10 @@ class ServerSocket
 		return serverConfig_;
 		}
 
-		// Handles client disconnection && Connection
+		// Handles client disconnection && Connection && timeout 
 		void handleClientDisconnection(int client_fd);
 		void handleClientConnection();
+		void handleClientTimeout();
 
 		// Processes epoll events
 		void processEpollEvents(int ready_fd_count);

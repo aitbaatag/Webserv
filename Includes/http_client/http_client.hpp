@@ -44,6 +44,7 @@ public:
   std::string request_buffer_;
   std::string response_buffer_;
   Status request_status_;
+  size_t time_client_;
   Status response_status_;
   int pos_; // position in the request_buffer_ to avoid re-parsing the same data
 
@@ -62,6 +63,8 @@ public:
   std::string get_request_buffer() const;
   void set_request_status(Status status);
   void set_response_status(Status status);
+  size_t get_client_time() {return time_client_;};
+  std::string get_client_ip() { return client_ip; };
 };
 
 #endif

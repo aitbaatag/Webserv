@@ -112,15 +112,6 @@ void ServerSocket::createEpollInstance()
 	}
 }
 
-// void ServerSocket::handleClientDisconnection(int client_fd)
-// {
-// 	if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL) == -1)
-// 		Logger::error("Failed to remove client from epoll: " + std::string(strerror(errno)));
-// 	std::map<int, HttpClient>::iterator it = clients_.find(client_fd);
-// 	if (it != clients_.end())
-// 		clients_.erase(it);
-// 	close(client_fd);
-// }
 
 ServerSocket::ServerSocket()
 {
@@ -196,6 +187,7 @@ void ServerSocket::processEpollEvents(int ready_fd_count)
 			}
 		}
 	}
+	
 }
 
 void ServerSocket::handleClientConnection()
@@ -205,6 +197,7 @@ void ServerSocket::handleClientConnection()
 	{
 		clients_[client.client_socket] = HttpClient(client.client_socket);
 		clients_[client.client_socket].client_ip = client.client_ip;
+		std::cout << Logger::info("Client " +  std::to_string(client.client_socket) + " connected from " + client.client_ip + " on port " + std::to_string(server_port_));
 		clients_[client.client_socket].registerEpollEvents(epoll_fd_);
 	}
 
@@ -212,4 +205,50 @@ void ServerSocket::handleClientConnection()
 	if (ready_fd_count < 0)
 		throw std::runtime_error(Logger::error("epoll_wait failed: " + std::string(strerror(errno))));
 	processEpollEvents(ready_fd_count);
+}
+
+void ServerSocket::handleClientDisconnection(int client_fd)
+{
+	if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL) == -1)
+		Logger::error("Failed to remove client " + std::to_string(client_fd) + " from epoll: " + std::string(strerror(errno)));
+
+	std::map<int, HttpClient>::iterator it = clients_.find(client_fd);
+	if (it != clients_.end())
+	{
+		try {
+			clients_.erase(it);
+		}
+		catch (const std::exception &e) {
+			Logger::error("Failed to remove client " + std::to_string(client_fd) + " from clients map: " + std::string(e.what()));
+		}
+	}
+	else
+		Logger::error("Client " + std::to_string(client_fd) + " not found in clients map");
+
+	if (close(client_fd) == -1)
+		Logger::error("Failed to close client socket " + std::to_string(client_fd) + ": " + std::string(strerror(errno)));
+}
+
+
+void ServerSocket::handleClientTimeout()
+{
+	std::map<int, HttpClient>::iterator it = clients_.begin();
+
+	while (it != clients_.end())
+	{
+		size_t current_time = time(NULL);
+		size_t client_time = it->second.get_client_time();
+
+		if ((current_time - client_time) > TIMEOUT)
+		{
+			int client_fd = it->first;
+			std::string client_ip = it->second.get_client_ip();
+			++it;
+			std::cout << Logger::info("Client " + std::to_string(client_fd) + " with IP " + client_ip + " timed out after " + std::to_string(TIMEOUT) + " seconds");
+			handleClientDisconnection(client_fd);
+		}
+		else
+		{ ++it;
+		}
+	}
 }

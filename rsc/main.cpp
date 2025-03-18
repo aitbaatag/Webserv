@@ -29,7 +29,11 @@ void startServers(std::vector<ServerSocket*> &servers)
 	while (true)
 	{
 		for (size_t i = 0; i < servers.size(); ++i)
+		{
 			servers[i]->handleClientConnection();
+			servers[i]->handleClientTimeout();
+
+		}
 	}
 }
 

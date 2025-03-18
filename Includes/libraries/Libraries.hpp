@@ -3,6 +3,7 @@
 
 #define MAX_EVENTS 10
 #define MAX_RECV 5048
+#define TIMEOUT 10
 
 #include <cstddef>
 #include <stdexcept>

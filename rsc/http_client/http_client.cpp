@@ -1,11 +1,17 @@
 
 #include "../../Includes/http_client/http_client.hpp"
 
+
+size_t get_current_time() {
+	return (size_t)time(NULL);
+}
+
 HttpClient::HttpClient(int socket_fd) : SMrequest() {
-  socket_fd_ = socket_fd;
-  pos_ = 0;
-  request_status_ = InProgress;
-  response_status_ = InProgress;
+	socket_fd_ = socket_fd;
+	pos_ = 0;
+	request_status_ = InProgress;
+	response_status_ = InProgress;
+	time_client_ = get_current_time();
 }
 
 int HttpClient::get_socket_fd() { return socket_fd_; }
@@ -18,19 +24,14 @@ void HttpClient::append_to_request()
 {
 	char buffer[MAX_RECV] = {};
 	ssize_t bytes_received = recv(socket_fd_, buffer, MAX_RECV - 1, 0);
-	if (bytes_received == 0)
+	if (bytes_received <= 0)
 	{
 		request_status_ = Disc;
 		return ;
 	}
-	else if (bytes_received < 0)
-	{
-		// wait no data avaible
-		return;
-	}
+	time_client_ = get_current_time();
 	buffer[bytes_received] = '\0';
 	request_buffer_ += buffer;
-	// std::cout << request_buffer_ << std::endl;
 }
 
 
