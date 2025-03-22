@@ -68,7 +68,7 @@ print(f"""<!DOCTYPE html>
         <p class='subtitle'>You have successfully logged in.</p>
         <p>If you want to upload a file, click the button below:</p>
         <div class='form-group'>
-            <form action='/upload' method='GET'>  <!-- ✅ Redirects to upload.html -->
+            <form action='/upload.html' method='GET'>  <!-- ✅ Redirects to upload.html -->
                 <button type='submit'>Upload</button>
             </form>
         </div>

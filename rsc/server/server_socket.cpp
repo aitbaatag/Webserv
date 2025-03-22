@@ -178,11 +178,10 @@ void ServerSocket::processEpollEvents(int ready_fd_count)
 			if ((events[i].events &EPOLLOUT) &&
 				clients_[events[i].data.fd].get_request_status() == Complete)
 			{
-				res.generateResponse(clients_[events[i].data.fd], events[i].data.fd);
-				if (clients_[events[i].data.fd].get_response_status() == Complete)
-				{
-					clients_.erase(events[i].data.fd);
-					close(events[i].data.fd);
+				res.response_handler(clients_[events[i].data.fd], events[i].data.fd, serverConfig_);
+				if (clients_[events[i].data.fd].get_response_status() == Complete) {
+					handleClientDisconnection(events[i].data.fd);
+					std::cout << Logger::info("Client " + std::to_string(events[i].data.fd) + " disconnected");
 				}
 			}
 		}

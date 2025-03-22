@@ -76,18 +76,18 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
   while (true) {
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
-      std::cout << "Request Line" << std::endl;
+      // std::cout << "Request Line" << std::endl;
       if (!parseRequestLine(client))
         return;
       break;
     case STATE_HEADERS:
-      std::cout << "Headers" << std::endl;
+      // std::cout << "Headers" << std::endl;
       if (!parseHeaders(client))
         return;
     case STATE_BODY: {
       switch (client.SMrequest.bodyType) {
       case START_: {
-        std::cout << "Start" << std::endl;
+        // std::cout << "Start" << std::endl;
         client.SMrequest.bodyType = determineBodyType(client.Srequest.headers);
         if (client.SMrequest.bodyType == MULTIPART ||
             client.SMrequest.bodyType == CHUNKED) {
@@ -97,12 +97,12 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
         break;
       }
       case NO_BODY: {
-        std::cout << "No Body" << std::endl;
+        // std::cout << "No Body" << std::endl;
         client.SMrequest.state = STATE_COMPLETE;
         break;
       }
       case MULTIPART: {
-        std::cout << "Multipart" << std::endl;
+        // std::cout << "Multipart" << std::endl;
         if (!StorMultipartBody(client))
           client.SMrequest.state = STATE_COMPLETE;
         else
@@ -110,7 +110,7 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
         break;
       }
       case CHUNKED: {
-        std::cout << "Chunked" << std::endl;
+        // std::cout << "Chunked" << std::endl;
         if (!parseChunkedBody(client))
           return;
         break;

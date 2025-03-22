@@ -222,7 +222,7 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       continue;
     case STATE_HEADER_DELIMITER2:
       if (c == '\n') {
-        std::cout << "STATE_HEADER_DELIMITER2" << std::endl;
+        // std::cout << "STATE_HEADER_DELIMITER2" << std::endl;
         client.SMrequest.state = STATE_BODY;
         pos++;
         client.update_pos(pos);
