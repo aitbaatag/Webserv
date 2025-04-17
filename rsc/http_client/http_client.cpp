@@ -22,16 +22,20 @@ Status HttpClient::get_response_status() { return response_status_; }
 
 void HttpClient::append_to_request()
 {
-	char buffer[MAX_RECV] = {};
-	ssize_t bytes_received = recv(socket_fd_, buffer, MAX_RECV - 1, 0);
+  pos_ = 0;
+  bytes_received = recv(socket_fd_, buffer, MAX_RECV - 1, 0);
 	if (bytes_received <= 0)
 	{
 		request_status_ = Disc;
 		return ;
 	}
-	time_client_ = get_current_time();
-	buffer[bytes_received] = '\0';
-	request_buffer_ += buffer;
+  time_client_ = get_current_time();
+  // printf("bytes_received: %ld\n", bytes_received);
+  // buffer[bytes_received] = '\0';
+  // std::ofstream file("request.txt",
+  //                    std::ios::out | std::ios::app | std::ios::binary);
+  // file.write(buffer, bytes_received);
+  // std::cout << request_buffer_ << std::endl;
 }
 
 

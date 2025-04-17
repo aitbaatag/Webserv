@@ -14,10 +14,9 @@ std::string trim(const std::string &str) {
   return str.substr(start, end - start + 1);
 }
 bool ValidMediaType(const std::string &media_type) {
-  if (media_type == "text/html" || media_type == "text/plain" ||
-      media_type == "application/json" || media_type == "application/xml" ||
-      media_type == "application/x-www-form-urlencoded" ||
-      media_type == "multipart/form-data")
+
+  printf("media_type: %s\n", media_type.c_str());
+  if (media_type == "text/plain")
     return true;
   return false;
 }
@@ -45,9 +44,7 @@ bool HttpRequest::ParseContent_Type(HttpClient &client) {
     std::string value = param.substr(pos + 1);
     if (key == "charset")
       client.Srequest.charset = value;
-    else if (key == "boundary") {
-      client.Srequest.boundary = value;
-    } else
+    else
       content_type_params[key] = value;
   }
   return true;
@@ -70,9 +67,9 @@ void HttpRequest::SetStartState(HttpClient &client) {
   }
 }
 bool HttpRequest::ParseStructuredField(HttpClient &client) {
-  std::string reqBuff = client.get_request_buffer();
+  char *reqBuff = client.get_request_buffer();
   size_t pos = client.get_pos();
-  while (pos < reqBuff.length()) {
+  while (pos < client.bytes_received) {
     char c = reqBuff[pos];
     switch (client.SMrequest.stateStructuredField) {
     case STATE_START:
@@ -80,8 +77,6 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
       continue;
     case STATE_CONTENT_LENGTH:
       if (c == '\r') {
-        std::cout << "content length: " << client.Srequest.field_body
-                  << std::endl;
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
         client.Srequest.body_length = std::stoi(client.Srequest.field_body);
@@ -139,6 +134,9 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_START;
         client.update_pos(pos);
+        if (pos >= client.bytes_received) {
+          client.update_pos(0);
+        }
         return true;
       } else {
         return false;
@@ -148,14 +146,17 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
     pos++;
     client.update_pos(pos);
   }
+  if (pos >= client.bytes_received) {
+    client.update_pos(0);
+  }
   return true;
 }
 
 // parsing headeR
 bool HttpRequest::parseHeaders(HttpClient &client) {
-  std::string reqBuff = client.get_request_buffer();
+  char *reqBuff = client.get_request_buffer();
   size_t pos = client.get_pos();
-  while (pos < reqBuff.length()) {
+  while (reqBuff[pos] != '\0') {
     char c = reqBuff[pos];
     switch (client.SMrequest.stateHeaders) {
     case STATE_HEADER_NAME:
@@ -171,7 +172,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
     case STATE_STRUCUTRE_FIELD:
       if (!ParseStructuredField(client)) {
         client.SMrequest.stateHeaders = STATE_ERROR;
-        return false;
       }
       pos = client.get_pos();
       continue;
@@ -222,15 +222,17 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       continue;
     case STATE_HEADER_DELIMITER2:
       if (c == '\n') {
-        // std::cout << "STATE_HEADER_DELIMITER2" << std::endl;
         client.SMrequest.state = STATE_BODY;
         pos++;
         client.update_pos(pos);
+        std::cout << "Headers finished, body starts at position: " << pos
+                  << std::endl;
         return true;
       } else
         client.SMrequest.stateHeaders = STATE_ERROR;
       break;
     case STATE_ERROR:
+      std::cout << "Error" << std::endl;
       client.Srequest.field_name.clear();
       client.Srequest.field_body.clear();
       client.Srequest.error_status = 400; // Bad Request
@@ -241,6 +243,8 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
     pos++;
     client.update_pos(pos);
   }
-
-  return true;
+  if (pos >= client.bytes_received) {
+    client.update_pos(0);
+  }
+  return false;
 }

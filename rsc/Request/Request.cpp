@@ -1,10 +1,11 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
+#include <ios>
 #include <iostream>
 HttpRequest::HttpRequest() {}
 bool HttpRequest::parseRequestLine(HttpClient &client) {
-  std::string reqBuff = client.get_request_buffer();
+  char *reqBuff = client.get_request_buffer();
   size_t pos = client.get_pos();
-  while (pos < reqBuff.length()) {
+  while (pos < client.bytes_received) {
     char c = reqBuff[pos];
     switch (client.SMrequest.stateRequestLine) {
     case STATE_METHOD:
@@ -53,8 +54,13 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
     case STATE_CRLF:
       if (c == '\n') {
         client.SMrequest.state = STATE_HEADERS;
-        pos++; // Skip the '\n'
+        if (reqBuff[pos] == '\n') {
+          pos++; // Skip the '\n'
+        }
         client.update_pos(pos);
+        if (pos >= client.bytes_received) {
+          client.update_pos(0);
+        }
         return true; // Successfully parsed the request line
       } else {
         client.Srequest.error_status = 400; // Bad Request
@@ -67,53 +73,46 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
     pos++;
     client.update_pos(pos);
   }
-  return true;
+  if (pos >= client.bytes_received) {
+    client.update_pos(0);
+  }
+  return false;
 }
 
 void HttpRequest::parseIncrementally(HttpClient &client) {
-  size_t pos = client.get_pos();
-  std::string reqBuff = client.get_request_buffer();
   while (true) {
+    printf ("Here2\n");
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
-      // std::cout << "Request Line" << std::endl;
-      if (!parseRequestLine(client))
+      if (!parseRequestLine(client)) {
         return;
+      }
       break;
     case STATE_HEADERS:
-      // std::cout << "Headers" << std::endl;
-      if (!parseHeaders(client))
+      if (!parseHeaders(client)) {
         return;
+      }
     case STATE_BODY: {
       switch (client.SMrequest.bodyType) {
       case START_: {
-        // std::cout << "Start" << std::endl;
         client.SMrequest.bodyType = determineBodyType(client.Srequest.headers);
-        if (client.SMrequest.bodyType == MULTIPART ||
-            client.SMrequest.bodyType == CHUNKED) {
-          client.Srequest.temp_file_fd =
-              open(".temp_file", O_CREAT | O_RDWR | O_APPEND, 0666);
-        }
         break;
       }
       case NO_BODY: {
-        // std::cout << "No Body" << std::endl;
         client.SMrequest.state = STATE_COMPLETE;
         break;
       }
-      case MULTIPART: {
-        // std::cout << "Multipart" << std::endl;
-        if (!StorMultipartBody(client))
+      case CHUNKED: {
+        if (parseChunkedBody(client))
           client.SMrequest.state = STATE_COMPLETE;
-        else
-          client.SMrequest.state = STATE_BODY;
         break;
       }
-      case CHUNKED: {
-        // std::cout << "Chunked" << std::endl;
-        if (!parseChunkedBody(client))
-          return;
-        break;
+      case TEXT_PLAIN: {
+        std::cout << "Text Plain" << std::endl;
+        if (parseTextPlainBody(client)) {
+          client.SMrequest.state = STATE_COMPLETE;
+        }
+        return;
       }
       }
       break;
@@ -125,14 +124,8 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
   }
 }
 
-void HttpRequest::printRequestLine(HttpClient &client) {
-  std::cout << "Method: " << client.Srequest.method << std::endl;
-  std::cout << "URI: " << client.Srequest.uri << std::endl;
-  std::cout << "Path: " << client.Srequest.path << std::endl;
-  std::cout << "Version: " << client.Srequest.version << std::endl;
-  std::cout << "Query: " << client.Srequest.query << std::endl;
-  std::cout << "Fragment: " << client.Srequest.fragment << std::endl;
-  // for (auto const &[key, value] : client.Srequest.headers) {
-  //   std::cout << "{" << key << ": " << value << "}\n";
-  // }
-}
+// void HttpRequest::printRequestLine(HttpClient &client) {
+//   for (auto const &[key, value] : client.Srequest.headers) {
+//     std::cout << "{" << key << ": " << value << "}\n";
+//   }
+// }
