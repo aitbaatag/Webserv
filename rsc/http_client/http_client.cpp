@@ -29,7 +29,6 @@ void HttpClient::append_to_request()
 		request_status_ = Disc;
 		return ;
 	}
-  time_client_ = get_current_time();
   // printf("bytes_received: %ld\n", bytes_received);
   // buffer[bytes_received] = '\0';
   // std::ofstream file("request.txt",
@@ -54,7 +53,7 @@ void HttpClient::update_pos(int new_pos) { pos_ = new_pos; }
 
 int HttpClient::get_pos() const { return pos_; }
 
-std::string HttpClient::get_request_buffer() const { return request_buffer_; }
+char *HttpClient::get_request_buffer() { return buffer; }
 
 void HttpClient::set_request_status(Status status) { request_status_ = status; }
 
