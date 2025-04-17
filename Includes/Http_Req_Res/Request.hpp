@@ -21,7 +21,7 @@ private:
 
   // parsing functions for body
   bool parseChunkedBody(HttpClient &client);
-  bool StorMultipartBody(HttpClient &client);
+  bool parseTextPlainBody(HttpClient &client);
   void parseChunkSize(HttpClient &client);
   void parseChunkData(HttpClient &client);
   void parseChunkEnd(HttpClient &client);

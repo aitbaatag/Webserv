@@ -21,14 +21,7 @@ enum StateChunk {
   STATE_CHUNK_LF, // Line Feed like '\n' after '\r'
   STATE_CHUNK_CRLF
 };
-enum MultipartState {
-  HEADERS,
-  DATA,
-  CREATEFILE,
-  OPEN_BOUNDARY,
-  CLOSE_BOUNDARY,
-  END_BOUNDARY
-};
+enum Text_plain { createFile, writeFile, checkFile };
 enum StateStructuredField {
   STATE_START,
   STATE_CONTENT_LENGTH,
@@ -45,7 +38,7 @@ enum ParseState {
   STATE_BODY,
   STATE_COMPLETE
 };
-enum BodyType { START_, CHUNKED, MULTIPART, NO_BODY };
+enum BodyType { START_, CHUNKED, TEXT_PLAIN, NO_BODY };
 enum StateRequestLine { STATE_METHOD, STATE_URI, STATE_VERSION, STATE_CRLF };
 const std::set<std::string> structuredFields = {
     "Content-Length", "Date",          "Content-Type",
@@ -56,8 +49,8 @@ public:
   ParseState state;
   StateHeaders stateHeaders;
   StateStructuredField stateStructuredField;
-  MultipartState stateMultipart;
-  StateChunk statechunk;
+  StateChunk stateChunk;
+  Text_plain stateTextPlain;
   BodyType bodyType;
   StateMachine();
 };

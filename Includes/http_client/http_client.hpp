@@ -29,14 +29,12 @@ struct Request {
   std::string charset;
   std::string Content_Type;
   int error_status = 0; // the error status of the request
-  int file_fd;
   std::string filename;
   std::string currentHeader;
   std::string currentData;
-  int body_read = 0;
   std::fstream fileStream;
-  std::fstream tmpFileStream;
-  std::string tmpFilename;
+  size_t body_start_pos = 0;
+  size_t body_write = 0;
 };
 class HttpClient {
 public:
