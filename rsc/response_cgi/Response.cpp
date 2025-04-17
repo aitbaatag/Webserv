@@ -35,16 +35,13 @@ void Response::setStatus(int code) {
 }
 
 void Response::setHeaders() {
-    // Clear previous headers
     _headers = "";
-    
-    // Set content type based on file extension
     std::string contentType = "text/plain";
-   // If it's a directory listing or HTML generated content, use text/html
+
     if (_body.find("<html>") != std::string::npos) {
         contentType = "text/html";
-    } else {
-        // Otherwise use file extension to determine content type
+    }
+    else {
         std::map<std::string, std::string> mimeTypes;
         
         mimeTypes[".html"] = "text/html";
@@ -61,6 +58,8 @@ void Response::setHeaders() {
         mimeTypes[".pdf"] = "application/pdf";
         mimeTypes[".zip"] = "application/zip";
         mimeTypes[".txt"] = "text/plain";
+        mimeTypes[".py"] = "text/html";
+        mimeTypes[".php"] = "text/html";
 
         size_t dotPos = _filePath.find_last_of(".");
         if (dotPos != std::string::npos) {
@@ -73,30 +72,21 @@ void Response::setHeaders() {
     
     _headers += "Content-Type: " + contentType + "\r\n";
     
-    // Add date header
     char buffer[100];
     time_t now = time(0);
     struct tm *timeinfo = gmtime(&now);
     strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
     _headers += "Date: " + std::string(buffer) + "\r\n";
-    
-    // Add server header
     _headers += "Server: WebServ/1.0\r\n";
-    
-    // Add Content-Length header
     _headers += "Content-Length: " + std::to_string(_bytesToSend) + "\r\n";
-    
-    // Add connection header
     _headers += "Connection: close\r\n";
-    
-    // End of headers
     _headers += "\r\n";
 }
 
 void Response::handleDirectoryListing(const std::string& path, const std::string& uri) {
     DIR* dir = opendir(path.c_str());
     if (!dir) {
-        setStatus(403); // Forbidden
+        setStatus(403);
         _body = "<html><body><h1>403 Forbidden</h1><p>Cannot access directory.</p></body></html>";
         _bytesToSend = _body.size();
         return;
@@ -131,10 +121,10 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
             std::string linkPrefix = (uri == "/" ? "" : uri);
             html << "<tr><td><a href=\"" << linkPrefix << (linkPrefix.empty() ? "" : "/") << entry->d_name << "\">" << entry->d_name << "</a></td>";
             
-            // Check if it's a directory
             if (S_ISDIR(entryStat.st_mode)) {
                 html << "<td>Directory</td>";
-            } else {
+            }
+            else {
                 // Display file size
                 if (entryStat.st_size < 1024) {
                     html << "<td>" << entryStat.st_size << " B</td>";
@@ -160,38 +150,36 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
     setStatus(200);
 }
 
+
 void Response::handleFileRequest(const ServerConfig& server, const Route& route) {
-    // Determine the full file path based on the route's root directory
     struct stat fileStat;
     
     if (stat(_filePath.c_str(), &fileStat) == 0) {
-        // Check if it's a directory
         if (S_ISDIR(fileStat.st_mode)) {
-            // If directory listing is turned on
             if (route.directory_listing) {
                 handleDirectoryListing(_filePath, route.path);
                 return;
             } 
-            // Try to use default file
             else if (!route.default_file.empty()) {
                 std::string defaultFilePath = _filePath + "/" + route.default_file;
                 if (stat(defaultFilePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
                     _filePath = defaultFilePath;
-                } else {
-                    setStatus(403); // Forbidden
+                }
+                else {
+                    setStatus(403);
                     _body = "<html><body><h1>403 Forbidden</h1><p>Directory listing not allowed.</p></body></html>";
                     _bytesToSend = _body.size();
                     return;
                 }
-            } else {
-                setStatus(403); // Forbidden
+            }
+            else {
+                setStatus(403);
                 _body = "<html><body><h1>403 Forbidden</h1><p>Directory access denied.</p></body></html>";
                 _bytesToSend = _body.size();
                 return;
             }
         }
         
-        // It's a regular file, try to open it
         _fileStream.open(_filePath.c_str(), std::ios::in | std::ios::binary);
         if (_fileStream.is_open()) {
             // Get file size
@@ -200,19 +188,19 @@ void Response::handleFileRequest(const ServerConfig& server, const Route& route)
             _fileStream.seekg(0, std::ios::beg);
             
             setStatus(200);
-            _body = ""; // We'll stream the file content later
-        } else {
-            // Failed to open file
-            setStatus(403); // Forbidden
+            _body = "";
+        }
+        else {
+            setStatus(403);
             _body = "<html><body><h1>403 Forbidden</h1><p>Cannot access file.</p></body></html>";
             _bytesToSend = _body.size();
         }
-    } else {
-        // File not found
+    }
+    else {
         setStatus(404);
-        // Check if custom error page is defined
         if (server.error_page.find("404") != server.error_page.end()) {
             std::string errorPagePath = server.error_page.at("404");
+            struct stat fileStat;
             if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
                 _fileStream.open(errorPagePath.c_str(), std::ios::in | std::ios::binary);
                 if (_fileStream.is_open()) {
@@ -223,16 +211,12 @@ void Response::handleFileRequest(const ServerConfig& server, const Route& route)
                 }
             }
         }
-        
-        // Default error page
         _body = "<html><body><h1>404 Not Found</h1><p>The requested resource could not be found.</p></body></html>";
         _bytesToSend = _body.size();
     }
 }
 
-
 void Response::handleDeleteRequest(const Request& request, const Route& route) {
-    // Check if file exists
     struct stat fileStat;
     if (stat(_filePath.c_str(), &fileStat) != 0) {
         setStatus(404);
@@ -241,7 +225,6 @@ void Response::handleDeleteRequest(const Request& request, const Route& route) {
         return;
     }
     
-    // Check if it's a directory
     if (S_ISDIR(fileStat.st_mode)) {
         setStatus(403);
         _body = "<html><body><h1>403 Forbidden</h1><p>Cannot delete a directory.</p></body></html>";
@@ -249,7 +232,6 @@ void Response::handleDeleteRequest(const Request& request, const Route& route) {
         return;
     }
     
-    // Try to delete the file
     if (unlink(_filePath.c_str()) != 0) {
         setStatus(500);
         _body = "<html><body><h1>500 Internal Server Error</h1><p>Failed to delete the resource.</p></body></html>";
@@ -257,18 +239,15 @@ void Response::handleDeleteRequest(const Request& request, const Route& route) {
         return;
     }
     
-    // Success
     setStatus(200);
     _body = "<html><body><h1>200 OK</h1><p>Resource deleted successfully.</p></body></html>";
     _bytesToSend = _body.size();
 }
 
 const ServerConfig& Response::findMatchingServer(const std::vector<ServerConfig>& servers, const Request& request) {
-    // First try to find a server that matches by server_name
     for (size_t i = 0; i < servers.size(); i++) {
         const ServerConfig& server = servers[i];
 
-        // Check if server_names contains the requested host
         for (size_t j = 0; j < server.server_names.size(); j++) {
             if (server.server_names[j] == request.headers.at("Host")) {
                 return server;
@@ -276,7 +255,6 @@ const ServerConfig& Response::findMatchingServer(const std::vector<ServerConfig>
         }
     }
 
-    // If all else fails, return the first server (should never happen if config is valid)
     return servers[0];
 }
 
@@ -284,20 +262,16 @@ const Route& Response::findMatchingRoute(const ServerConfig& server, const std::
     std::string bestMatch = "";
     size_t bestMatchIndex = 0;
 
-    // First, find exact path match
     for (size_t i = 0; i < server.routes.size(); i++) {
         if (server.routes[i].path == path) {
             return server.routes[i];
         }
     }
 
-    // If no exact match, find the longest matching prefix
     for (size_t i = 0; i < server.routes.size(); i++) {
         const std::string& routePath = server.routes[i].path;
         
-        // Check if the route path is a prefix of the requested path
         if (path.compare(0, routePath.length(), routePath) == 0) {
-            // Check if this route path is longer than our current best match
             if (routePath.length() > bestMatch.length()) {
                 bestMatch = routePath;
                 bestMatchIndex = i;
@@ -305,12 +279,10 @@ const Route& Response::findMatchingRoute(const ServerConfig& server, const std::
         }
     }
 
-    // If we found a prefix match
     if (!bestMatch.empty()) {
         return server.routes[bestMatchIndex];
     }
 
-    // If no matching route is found, return the route with path "/"
     for (size_t i = 0; i < server.routes.size(); i++) {
         if (server.routes[i].path == "/") {
             return server.routes[i];
@@ -322,7 +294,6 @@ const Route& Response::findMatchingRoute(const ServerConfig& server, const std::
 }
 
 void Response::response_handler(HttpClient &client, int fd, const std::vector<ServerConfig>& servers) {
-    // If this is the first call for this response, prepare the response
     if (!_headersSent) {
         const ServerConfig& server = findMatchingServer(servers, client.Srequest);
         const Route& route = findMatchingRoute(server, client.Srequest.path);
@@ -345,24 +316,36 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
             _body = "<html><body><h1>" + _status + "</h1><p>An error occurred processing your request.</p></body></html>";
             _bytesToSend = _body.size();
         }
+        else if (!route.redirect.empty()) {
+            // Handle redirection
+            setStatus(301); // Or 302 based on your configuration
+            _headers = "Location: " + route.redirect + "\r\n";
+            _body = "<html><body><h1>301 Moved Permanently</h1><p>Resource has been moved to <a href=\"" + route.redirect + "\">" + route.redirect + "</a>.</p></body></html>";
+            _bytesToSend = _body.size();
+        }
         else {
-            // Construct the file path based on the request and route
             if (client.Srequest.path == "/") {
                 _filePath = "." + route.root_dir + "/" + route.default_file;
-            } else {
+            }
+            else {
                 _filePath = "." + route.root_dir + client.Srequest.path;
             }
+        
+            std::cout << "File path: " << _filePath << std::endl;
             
             if (client.Srequest.method == "GET") {
                 size_t dotPos = _filePath.find_last_of(".");
                 if (dotPos != std::string::npos) {
                     std::string extension = _filePath.substr(dotPos);
                     if (route.cgi_extension.find(extension) != route.cgi_extension.end()) {
+                        std::cout << "Handling CGI request for file: " << _filePath << std::endl;
                         handleCGIRequest(client.Srequest, route);
-                    } else {
+                    }
+                    else {
                         handleFileRequest(server, route);
                     }
-                } else {
+                }
+                else {
                     handleFileRequest(server, route);
                 }
             }
@@ -371,14 +354,32 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
                 if (dotPos != std::string::npos) {
                     std::string extension = _filePath.substr(dotPos);
                     if (route.cgi_extension.find(extension) != route.cgi_extension.end()) {
+                        std::cout << "Handling CGI request for file: " << _filePath << std::endl;
                         handleCGIRequest(client.Srequest, route);
-                    } else {
-                        std::cout << "POST method not allowed for this resource" << std::endl;
+                    }
+                    // else if (!route.upload_dir.empty()) {
+                    //     // Handle file upload
+                    //     std::string uploadPath = route.upload_dir + "/" + client.Srequest.headers.at("Filename");
+                    //     std::ofstream uploadFile(uploadPath, std::ios::binary);
+                    //     if (uploadFile.is_open()) {
+                    //         uploadFile.write(client.Srequest.body.c_str(), client.Srequest.body.size());
+                    //         uploadFile.close();
+                    //         setStatus(201);
+                    //         _body = "<html><body><h1>201 Created</h1><p>File uploaded successfully.</p></body></html>";
+                    //     }
+                    //     else {
+                    //         setStatus(500);
+                    //         _body = "<html><body><h1>500 Internal Server Error</h1><p>Failed to save uploaded file.</p></body></html>";
+                    //     }
+                    //     _bytesToSend = _body.size();
+                    // }
+                    else {
                         setStatus(405);
                         _body = "<html><body><h1>405 Method Not Allowed</h1><p>POST method not allowed for this resource.</p></body></html>";
                         _bytesToSend = _body.size();
                     }
-                } else {
+                }
+                else {
                     setStatus(405);
                     _body = "<html><body><h1>405 Method Not Allowed</h1><p>POST method not allowed for this resource.</p></body></html>";
                     _bytesToSend = _body.size();
@@ -438,18 +439,19 @@ bool Response::sendResponseChunk(int fd) {
             
             _bytesSent += bytesSent;
             
-            // If we've sent the full file or there was an error
             if (_bytesSent >= _bytesToSend || _fileStream.eof()) {
                 _fileStream.close();
                 return true;
             }
             
             return false;
-        } else {
+        }
+        else {
             _fileStream.close();
             return true;
         }
-    } else if (_bytesToSend > 0) {
+    }
+    else if (_bytesToSend > 0) {
         // Send body content in one go (for small responses)
         ssize_t bytesSent = send(fd, _body.c_str() + _bytesSent, _bytesToSend - _bytesSent, 0);
         if (bytesSent < 0) {
@@ -464,7 +466,8 @@ bool Response::sendResponseChunk(int fd) {
         }
         
         return false;
-    } else {
+    }
+    else {
         return true;
     }
 }
