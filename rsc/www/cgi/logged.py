@@ -72,7 +72,7 @@ print(f"""<!DOCTYPE html>
                 <button type='submit'>Upload</button>
             </form>
         </div>
-        <a href='/login' style='display: block; margin-top: 15px; text-decoration: underline; color: #007bff;'>Go Back</a>
+        <a href='/login.html' style='display: block; margin-top: 15px; text-decoration: underline; color: #007bff;'>Go Back</a>
     </div>
 </body>
 </html>
