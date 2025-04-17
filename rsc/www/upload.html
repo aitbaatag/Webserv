@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -67,6 +66,19 @@
       text-decoration: underline;
       color: #007bff;
     }
+    .progress-container {
+      margin-top: 20px;
+      height: 20px;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: #007bff;
+      transition: width 0.2s ease;
+    }
   </style>
 </head>
 <body>
@@ -76,41 +88,49 @@
     <div class="upload-form">
       <input type="file" id="file" class="file-input" required />
       <br />
-      <button class="submit-button" onclick="uploadTextPlain()">Upload File</button>
+      <button class="submit-button" onclick="uploadWithProgress()">Upload File</button>
+      <div class="progress-container">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
     </div>
-    <a href="/cgi/logged.py" class="go-back">Go Back</a>
+    <a href="/cgi-bin/logged" class="go-back">Go Back</a>
   </div>
 
   <script>
-function uploadTextPlain() {
-  const fileInput = document.getElementById('file');
-  const file = fileInput.files[0];
-  if (!file) {
-    alert('Please select a file.');
-    return;
-  }
+    function uploadWithProgress() {
+      const fileInput = document.getElementById('file');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please select a file.');
+        return;
+      }
 
-  fetch('/submit-upload', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain',
-      'X-File-Name': file.name
-    },
-    body: file
-  })
-  .then(response => {
-    if (response.ok) {
-      alert('File uploaded as text/plain!');
-    } else {
-      alert('Upload failed.');
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/submit-upload', true);
+      xhr.setRequestHeader('Content-Type', 'text/plain');
+      xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
+
+      xhr.upload.onprogress = function (event) {
+        if (event.lengthComputable) {
+          const percent = (event.loaded / event.total) * 100;
+          document.getElementById('progressBar').style.width = percent + '%';
+        }
+      };
+
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          alert('File uploaded successfully!');
+        } else {
+          alert('Upload failed.');
+        }
+      };
+
+      xhr.onerror = function () {
+        alert('An error occurred during upload.');
+      };
+
+      xhr.send(file);
     }
-  })
-  .catch(error => {
-    console.error('Upload error:', error);
-    alert('An error occurred during upload.');
-  });
-}
-
   </script>
 </body>
 </html>
