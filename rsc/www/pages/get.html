@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GET Test Page - Webserv</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .get-container {
+            max-width: 700px;
+            margin: 2rem auto;
+            background: var(--container-bg);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            text-align: center;
+        }
+
+        .title {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .message {
+            color: var(--text-color);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .method {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        .button {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            background: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background: var(--container-bg);
+            border: 2px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapperAll container">
+        <div class="titleSection">
+            <h1>GET Request Test</h1>
+            <p>Testing GET method functionality</p>
+        </div>
+        <div class="get-container">
+            <h1 class="title">Success!</h1>
+            <p class="message">
+                You have successfully displayed this page using the
+                <span class="method">GET</span> method.
+            </p>
+            <button class="button" onclick="window.history.back()">Go Back</button>
+        </div>
+        <footer>
+            <p>© 2025 Webserv - Modern HTTP Server</p>
+        </footer>
+    </div>
+</body>
+</html>

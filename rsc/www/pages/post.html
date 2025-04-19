@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POST Test Page - Webserv</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .post-container {
+            max-width: 700px;
+            margin: 2rem auto;
+            background: var(--container-bg);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--container-bg);
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        .response-area {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            min-height: 100px;
+            display: none;
+        }
+
+        .response-area.visible {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .button {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .button.back {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapperAll container">
+        <div class="titleSection">
+            <h1>POST Request Test</h1>
+            <p>Enter your name and submit the form</p>
+        </div>
+        <div class="post-container">
+            <form id="postForm">
+                <div class="form-group">
+                    <label for="name">Your Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <button type="submit" class="button">Send POST Request</button>
+                <button type="button" class="button back" onclick="window.history.back()">Go Back</button>
+            </form>
+            <div id="responseArea" class="response-area">
+                <strong>Server Response:</strong>
+                <p id="responseText"></p>
+            </div>
+        </div>
+        <footer>
+            <p>© 2025 Webserv - Modern HTTP Server</p>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const responseArea = document.getElementById('responseArea');
+            const responseText = document.getElementById('responseText');
+
+            try {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `name=${encodeURIComponent(name)}`
+                });
+
+                const data = await response.text();
+                responseText.textContent = data;
+                responseArea.classList.add('visible');
+            } catch (error) {
+                responseText.textContent = 'Error: ' + error.message;
+                responseArea.classList.add('visible');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -79,7 +79,7 @@ bool HttpRequest::ParseStructuredField(HttpClient &client) {
       if (c == '\r') {
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
         client.SMrequest.stateStructuredField = STATE_STRUCTURED_FIELD_END;
-        client.Srequest.body_length = std::stoi(client.Srequest.field_body);
+        client.Srequest.body_length = std::stoull(client.Srequest.field_body);
       } else if (c >= '0' && c <= '9') {
         client.Srequest.field_body += c;
       } else {

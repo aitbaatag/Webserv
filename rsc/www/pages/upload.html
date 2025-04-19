@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Modern File Upload - Webserv</title>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+		<link rel="stylesheet" href="../style.css">
+		<style>
+			.button.back {
+				background: var(--border-color);
+				color: var(--text-color);
+			}
+			
+			.button.back:hover {
+				background: var(--container-bg);
+				border: 2px solid var(--border-color);
+			}
+
+			.upload-container {
+			max-width: 700px;
+			margin: 2rem auto;
+			background: var(--container-bg);
+			border-radius: 16px;
+			padding: 2.5rem;
+			box-shadow: 0 8px 32px var(--shadow-color);
+			border: 1px solid var(--border-color);
+			backdrop-filter: blur(12px);
+			}
+			.drop-zone {
+			position: relative;
+			padding: 3rem;
+			border: 2px dashed var(--primary-color);
+			border-radius: 12px;
+			background: rgba(30, 144, 255, 0.05);
+			transition: all 0.3s ease;
+			text-align: center;
+			cursor: pointer;
+			}
+			.drop-zone:hover {
+			background: rgba(30, 144, 255, 0.1);
+			transform: translateY(-2px);
+			}
+			.drop-zone.dragover {
+			background: rgba(0, 255, 136, 0.1);
+			border-color: var(--secondary-color);
+			}
+			.upload-icon {
+			width: 80px;
+			height: 80px;
+			margin-bottom: 1.5rem;
+			fill: var(--primary-color);
+			animation: float 3s ease-in-out infinite;
+			}
+			@keyframes float {
+			0%, 100% { transform: translateY(0); }
+			50% { transform: translateY(-10px); }
+			}
+			.drop-zone h3 {
+			font-size: 1.5rem;
+			margin-bottom: 0.5rem;
+			color: var(--primary-color);
+			}
+			.drop-zone p {
+			margin: 0.5rem 0;
+			color: var(--text-color);
+			opacity: 0.8;
+			}
+			.file-input {
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			top: 0;
+			left: 0;
+			opacity: 0;
+			cursor: pointer;
+			}
+			.file-info {
+			margin-top: 2rem;
+			padding: 1.5rem;
+			background: rgba(255, 255, 255, 0.05);
+			border-radius: 12px;
+			border: 1px solid var(--border-color);
+			display: none;
+			}
+			.file-info.visible {
+			display: block;
+			animation: slideUp 0.3s ease-out;
+			}
+			@keyframes slideUp {
+			from { transform: translateY(10px); opacity: 0; }
+			to { transform: translateY(0); opacity: 1; }
+			}
+			.upload-options {
+			margin-top: 2rem;
+			}
+			.checkbox-wrapper {
+			display: flex;
+			align-items: center;
+			margin: 1rem 0;
+			padding: 0.5rem;
+			border-radius: 8px;
+			transition: background 0.3s ease;
+			}
+			.checkbox-wrapper:hover {
+			background: rgba(255, 255, 255, 0.05);
+			}
+			.modern-checkbox {
+			appearance: none;
+			width: 22px;
+			height: 22px;
+			border: 2px solid var(--primary-color);
+			border-radius: 6px;
+			margin-right: 12px;
+			cursor: pointer;
+			position: relative;
+			transition: all 0.2s ease;
+			}
+			.modern-checkbox:checked {
+			background: var(--primary-color);
+			}
+			.modern-checkbox:checked::after {
+			content: '✓';
+			position: absolute;
+			color: white;
+			font-size: 14px;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			}
+			.progress-bar {
+			margin-top: 2rem;
+			height: 6px;
+			background: var(--border-color);
+			border-radius: 3px;
+			overflow: hidden;
+			display: none;
+			}
+			.progress-fill {
+			height: 100%;
+			background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+			width: 0%;
+			transition: width 0.3s ease;
+			}
+			.button-group {
+			display: flex;
+			gap: 1rem;
+			margin-top: 2rem;
+			}
+			.button {
+			flex: 1;
+			padding: 1rem 1.5rem;
+			border-radius: 12px;
+			font-weight: 600;
+			letter-spacing: 0.5px;
+			transition: all 0.3s ease;
+			}
+			.button:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+			}
+			.button.primary {
+			background: var(--primary-color);
+			color: white;
+			}
+			.button.secondary {
+			background: transparent;
+			border: 2px solid var(--primary-color);
+			color: var(--primary-color);
+			}
+			.upload-result {
+			margin-top: 1.5rem;
+			padding: 1rem;
+			border-radius: 12px;
+			text-align: center;
+			display: none;
+			}
+			.upload-result.success {
+			background: rgba(0, 255, 136, 0.1);
+			border: 1px solid var(--secondary-color);
+			}
+			.upload-result.error {
+			background: rgba(255, 59, 48, 0.1);
+			border: 1px solid #ff3b30;
+			}
+		</style>
+	</head>
+	<body>
+		
+		<div class="wrapperAll container">
+			<div class="titleSection">
+				<h1>File Upload</h1>
+				<p>Drag and drop your file or browse to upload</p>
+			</div>
+			<div class="upload-container">
+				<div class="drop-zone" id="dropZone">
+					<svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+						<path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+					</svg>
+					<h3>Drop your files here</h3>
+					<p>or</p>
+					<p><strong>Click to browse</strong></p>
+					<input type="file" id="fileInput" class="file-input">
+					<div id="curlCommand" style="display: none; margin-top: 1rem; text-align: left; color: var(--text-color); background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); font-family: monospace; font-size: 0.9rem;"></div>
+				</div>
+				<div class="file-info" id="fileInfo">
+					<p><strong>File:</strong> <span id="fileName">No file selected</span></p>
+					<p><strong>Size:</strong> <span id="fileSize">0 KB</span></p>
+					<p><strong>Type:</strong> <span id="fileType">Unknown</span></p>
+				</div>
+				<div class="upload-options">
+					<div class="checkbox-wrapper">
+						<input type="checkbox" id="chunkedTransfer" class="modern-checkbox">
+						<label for="chunkedTransfer">Enable chunked upload</label>
+					</div>
+				</div>
+				<div class="progress-bar" id="progressBar">
+					<div class="progress-fill" id="progressFill"></div>
+				</div>
+				<div class="upload-result" id="uploadResult"></div>
+				<div class="button-group">
+					<button class="button back" id="backButton" onclick="window.history.back()">Go Back</button>
+					<button class="button secondary" id="cancelButton">Cancel</button>
+					<button class="button primary" id="uploadButton" disabled>Upload File</button>
+				</div>
+			</div>
+			<footer>
+				<p>© 2025 Webserv - Modern HTTP Server</p>
+			</footer>
+		</div>
+		<script>
+			class FileUploader {
+			constructor() {
+			this.initElements();
+			this.initVariables();
+			this.initEventListeners();
+			this.initTheme();
+			}
+			
+			initElements() {
+			this.dropZone = document.getElementById('dropZone');
+			this.fileInput = document.getElementById('fileInput');
+			this.fileInfo = document.getElementById('fileInfo');
+			this.fileName = document.getElementById('fileName');
+			this.fileSize = document.getElementById('fileSize');
+			this.fileType = document.getElementById('fileType');
+			this.chunkedTransfer = document.getElementById('chunkedTransfer');
+			this.progressBar = document.getElementById('progressBar');
+			this.progressFill = document.getElementById('progressFill');
+			this.uploadButton = document.getElementById('uploadButton');
+			this.cancelButton = document.getElementById('cancelButton');
+			this.uploadResult = document.getElementById('uploadResult');
+			}
+			
+			initVariables() {
+			this.selectedFile = null;
+			this.xhr = null;
+			this.isUploading = false;
+			this.CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+			}
+			
+			initEventListeners() {
+			['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+			    this.dropZone.addEventListener(event, (e) => {
+			        e.preventDefault();
+			        e.stopPropagation();
+			    });
+			});
+			
+			['dragenter', 'dragover'].forEach(event => {
+			    this.dropZone.addEventListener(event, () => this.dropZone.classList.add('dragover'));
+			});
+			
+			['dragleave', 'drop'].forEach(event => {
+			    this.dropZone.addEventListener(event, () => this.dropZone.classList.remove('dragover'));
+			});
+			
+			this.dropZone.addEventListener('drop', (e) => this.handleFileDrop(e));
+			this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+			this.uploadButton.addEventListener('click', () => this.startUpload());
+			this.cancelButton.addEventListener('click', () => this.cancelUpload());
+			}
+			
+			handleFileDrop(e) {
+			const file = e.dataTransfer.files[0];
+			if (file) this.processFile(file);
+			}
+			
+			handleFileSelect(e) {
+			const file = e.target.files[0];
+			if (file) this.processFile(file);
+			}
+			
+			processFile(file) {
+			this.selectedFile = file;
+			this.updateFileInfo(file);
+			this.uploadButton.disabled = false;
+			this.fileInfo.classList.add('visible');
+			}
+			
+			updateFileInfo(file) {
+			this.fileName.textContent = file.name;
+			this.fileSize.textContent = this.formatFileSize(file.size);
+			this.fileType.textContent = file.type || 'Unknown';
+			}
+			
+			formatFileSize(bytes) {
+			if (bytes === 0) return '0 Bytes';
+			const k = 1024;
+			const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+			const i = Math.floor(Math.log(bytes) / Math.log(k));
+			return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+			}
+			
+			startUpload() {
+			if (!this.selectedFile || this.isUploading) return;
+			this.isUploading = true;
+			this.updateUIForUpload(true);
+			
+			if (this.chunkedTransfer.checked) {
+			    this.uploadInChunks();
+			} else {
+			    this.uploadWhole();
+			}
+			}
+			
+			uploadWhole() {
+			this.xhr = new XMLHttpRequest();
+			this.xhr.open('POST', '/submit-upload', true);
+			this.xhr.setRequestHeader('Content-Type', 'text/plain');
+			this.xhr.setRequestHeader('X-File-Name', encodeURIComponent(this.selectedFile.name));
+			
+			this.xhr.upload.onprogress = (event) => {
+			    if (event.lengthComputable) {
+			        const percent = (event.loaded / event.total) * 100;
+			        this.updateProgress(percent);
+			    }
+			};
+			
+			this.xhr.onload = () => {
+			    if (this.xhr.status >= 200 && this.xhr.status < 300) {
+			        this.showSuccess('File uploaded successfully!');
+			    } else {
+			        this.showError(`Upload failed: ${this.xhr.statusText}`);
+			    }
+			    this.resetUpload();
+			};
+			
+			this.xhr.onerror = () => {
+			    this.showError('Upload failed: Network error');
+			    this.resetUpload();
+			};
+			
+			this.xhr.send(this.selectedFile);
+			}
+			
+			
+			
+			updateUIForUpload(starting) {
+			this.uploadButton.disabled = starting;
+			this.progressBar.style.display = starting ? 'block' : 'none';
+			this.progressFill.style.width = starting ? '0%' : '100%';
+			this.uploadResult.style.display = 'none';
+			}
+			
+			updateProgress(percent) {
+			this.progressFill.style.width = `${percent}%`;
+			}
+			
+			cancelUpload() {
+			if (this.isUploading && this.xhr) {
+			    this.xhr.abort();
+			    this.showInfo('Upload cancelled');
+			}
+			this.resetUpload();
+			}
+			
+			resetUpload() {
+			this.isUploading = false;
+			this.updateUIForUpload(false);
+			}
+			
+			showSuccess(message) {
+			this.showMessage(message, 'success');
+			}
+			
+			showError(message) {
+			this.showMessage(message, 'error');
+			}
+			
+			showInfo(message) {
+			this.showMessage(message, 'info');
+			}
+			
+			showMessage(message, type) {
+			this.uploadResult.className = `upload-result ${type}`;
+			this.uploadResult.textContent = message;
+			this.uploadResult.style.display = 'block';
+			}
+			
+			initTheme() {
+			const theme = localStorage.getItem('theme') || 'dark';
+			document.documentElement.setAttribute('data-theme', theme);
+			}
+			}
+			
+			document.addEventListener('DOMContentLoaded', () => {
+			new FileUploader();
+			});
+		</script>
+		<script>
+			const chunkedCheckbox = document.getElementById('chunkedTransfer');
+			const fileInput = document.getElementById('fileInput');
+			const curlCommandBox = document.getElementById('curlCommand');
+			const uploadButton = document.getElementById('uploadButton');
+			
+			chunkedCheckbox.addEventListener('change', function () {
+			    if (this.checked) {
+			        fileInput.style.display = 'none';
+			        curlCommandBox.style.display = 'block';
+			        curlCommandBox.textContent = 'curl -X POST -H "Transfer-Encoding: chunked" -H "Content-Type: text/plain" --data-binary @file_path http://localhost:8080';
+			        uploadButton.disabled = true;
+			    } else {
+			        fileInput.style.display = 'block';
+			        curlCommandBox.style.display = 'none';
+			        curlCommandBox.textContent = '';
+			        uploadButton.disabled = false;
+			    }
+			});
+		</script>    
+	</body>
+</html>

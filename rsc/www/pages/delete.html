@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete File - Webserv</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .delete-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            background: var(--container-bg);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+        }
+
+        .files-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+
+        .files-table th,
+        .files-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .files-table th {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .files-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .file-select {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            appearance: none;
+            cursor: pointer;
+            position: relative;
+            background: var(--container-bg);
+        }
+
+        .file-select:checked {
+            border: 6px solid var(--primary-color);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .button {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .button.delete {
+            background: #ff3b30;
+            color: white;
+        }
+
+        .button.back {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response-area {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            display: none;
+        }
+
+        .response-area.visible {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapperAll container">
+        <div class="titleSection">
+            <h1>Delete File</h1>
+            <p>Select a file to delete from the server</p>
+        </div>
+        <div class="delete-container">
+            <table class="files-table" id="filesTable">
+                <thead>
+                    <tr>
+                        <th>Select</th>
+                        <th>Name</th>
+                        <th>Size</th>
+                        <th>Last Modified</th>
+                    </tr>
+                </thead>
+                <tbody id="filesList">
+                    <!-- Files will be populated here -->
+                </tbody>
+            </table>
+            <div class="button-group">
+                <button class="button back" onclick="window.history.back()">Go Back</button>
+                <button class="button delete" id="deleteButton" disabled>Delete Selected File</button>
+            </div>
+            <div id="responseArea" class="response-area">
+                <strong>Server Response:</strong>
+                <p id="responseText"></p>
+            </div>
+        </div>
+        <footer>
+            <p>© 2025 Webserv - Modern HTTP Server</p>
+        </footer>
+    </div>
+
+    <script>
+        async function loadFiles() {
+            try {
+                const response = await fetch('/pages/');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const rows = doc.querySelectorAll('table tr');
+                const filesList = document.getElementById('filesList');
+                
+                // Skip header row
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length === 3) {
+                        const fileName = cells[0].querySelector('a').textContent;
+                        const fileSize = cells[1].textContent;
+                        const lastModified = cells[2].textContent;
+                        
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><input type="radio" name="fileSelect" class="file-select" value="${fileName}"></td>
+                            <td>${fileName}</td>
+                            <td>${fileSize}</td>
+                            <td>${lastModified}</td>
+                        `;
+                        filesList.appendChild(tr);
+                    }
+                }
+
+                // Add change event listeners to radio buttons
+                document.querySelectorAll('.file-select').forEach(radio => {
+                    radio.addEventListener('change', updateDeleteButton);
+                });
+            } catch (error) {
+                console.error('Error loading files:', error);
+                showResponse('Error loading files: ' + error.message, 'error');
+            }
+        }
+
+        function updateDeleteButton() {
+            const selectedFile = document.querySelector('.file-select:checked');
+            const deleteButton = document.getElementById('deleteButton');
+            deleteButton.disabled = !selectedFile;
+        }
+
+        async function deleteFile() {
+            const selectedFile = document.querySelector('.file-select:checked');
+            if (!selectedFile) return;
+            
+            try {
+                const response = await fetch(`/pages/${selectedFile.value}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showResponse(`Successfully deleted: ${selectedFile.value}`);
+                } else {
+                    showResponse(`Failed to delete ${selectedFile.value}: ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showResponse(`Error deleting file: ${error.message}`, 'error');
+            }
+
+            // Reload the file list
+            document.getElementById('filesList').innerHTML = '';
+            loadFiles();
+        }
+
+        function showResponse(message, type = 'success') {
+            const responseArea = document.getElementById('responseArea');
+            const responseText = document.getElementById('responseText');
+            responseText.textContent = message;
+            responseArea.className = `response-area visible ${type}`;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFiles();
+            document.getElementById('deleteButton').addEventListener('click', deleteFile);
+        });
+    </script>
+</body>
+</html>

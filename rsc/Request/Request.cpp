@@ -81,7 +81,6 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
 
 void HttpRequest::parseIncrementally(HttpClient &client) {
   while (true) {
-    printf ("Here2\n");
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
       if (!parseRequestLine(client)) {

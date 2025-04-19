@@ -1,179 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome - Home</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f8ff;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-            padding: 20px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .container {
-            max-width: 700px;
-            padding: 40px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 123, 255, 0.1);
-            z-index: 10;
-            animation: fadeIn 1s ease-out;
-        }
-
-        .welcome-icon {
-            font-size: 80px;
-            animation: floatUpDown 3s ease-in-out infinite;
-            display: inline-block;
-            margin-bottom: 15px;
-        }
-
-        .title {
-            font-size: 32px;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 15px;
-            animation: slideInRight 0.8s ease-out;
-        }
-
-        .description {
-            font-size: 18px;
-            color: #555;
-            line-height: 1.6;
-            animation: slideInLeft 0.8s ease-out;
-        }
-
-        .button {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            animation: fadeIn 1.5s ease-out;
-        }
-
-        .button:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px);
-        }
-
-        .particles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            overflow: hidden;
-        }
-
-        .particle {
-            position: absolute;
-            display: block;
-            background-color: rgba(0, 123, 255, 0.2);
-            border-radius: 50%;
-            animation: moveParticle 15s linear infinite;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideInRight {
-            from { transform: translateX(50px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        @keyframes slideInLeft {
-            from { transform: translateX(-50px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        @keyframes floatUpDown {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-        }
-
-        @keyframes moveParticle {
-            0% { transform: translateY(0) translateX(0); opacity: 1; }
-            100% { transform: translateY(-1000px) translateX(100px); opacity: 0; }
-        }
-
-        @media (max-width: 576px) {
-            .title {
-                font-size: 28px;
-            }
-
-            .description {
-                font-size: 16px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="particles" id="particles"></div>
-    <div class="container">
-        <div class="welcome-icon">🚀</div>
-        <h1 class="title">Welcome to Our Website</h1>
-        <p class="description">
-            We're glad to have you here! enjoy a smooth experience.
-        </p>
-        <a href="/login.html" class="button">Login</a>
-    </div>
-
-    <script>
-        // Create floating particles
-        function createParticles() {
-            const particlesContainer = document.getElementById('particles');
-            const particleCount = 20;
-
-            for (let i = 0; i < particleCount; i++) {
-                const particle = document.createElement('span');
-                particle.className = 'particle';
-
-                // Random size between 5 and 20px
-                const size = Math.random() * 15 + 5;
-                particle.style.width = `${size}px`;
-                particle.style.height = `${size}px`;
-
-                // Random position
-                particle.style.top = `${Math.random() * 100}%`;
-                particle.style.left = `${Math.random() * 100}%`;
-
-                // Random animation delay and duration
-                const duration = Math.random() * 10 + 5;
-                const delay = Math.random() * 5;
-                particle.style.animationDuration = `${duration}s`;
-                particle.style.animationDelay = `${delay}s`;
-
-                particlesContainer.appendChild(particle);
-            }
-        }
-
-        // Initialize animations when page loads
-        window.addEventListener('load', function() {
-            createParticles();
-        });
-    </script>
-</body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>Webserv</title>
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+		<link rel="stylesheet" href="style.css"/>
+	</head>
+	<body>
+		<section class="wrapperAll container">
+			<div class="titleSection">
+				<h1>Webserv</h1>
+				<p>A modern HTTP server implementation</p>
+			</div>
+			<div class="bigLine"></div>
+			<div class="titleSection">
+				<h2>Mandatory Features</h2>
+			</div>
+			<section class="features">
+				<div class="wrapper">
+					<h2 class="subtitle">GET</h2>
+					<div class="line"></div>
+					<p>Try GET Method</p>
+					<a href="./pages/get.html" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">POST</h2>
+					<div class="line"></div>
+					<p>Try POST Method</p>
+					<a href="./pages/post.html" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">DELETE</h2>
+					<div class="line"></div>
+					<p>Try DELETE Method</p>
+					<a href="./pages/delete.html" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">UPLOAD</h2>
+					<div class="line"></div>
+					<p>Upload a File to the Server</p>
+					<a href="./pages/upload.html" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">DOWNLOAD</h2>
+					<div class="line"></div>
+					<p>Download the uploaded files</p>
+					<a href="./pages/download.html" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">List Directory</h2>
+					<div class="line"></div>
+					<p>List the files in /list</p>
+					<a href="/list" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">Redirection</h2>
+					<div class="line"></div>
+					<p>Go to <u>youtube.com</u> with 301 Redirection</p>
+					<a href="/youtube" class="button">Try</a>
+				</div>
+			</section>
+			<div class="bigLine"></div>
+			<div class="titleSection">
+				<h2>Bonus Features</h2>
+			</div>
+			<section class="features bonus">
+				<div class="wrapper">
+					<h2 class="subtitle">LOGIN</h2>
+					<div class="line"></div>
+					<p>Create an account, log in, write private notes</p>
+					<a href="/login" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">CGI PYTHON</h2>
+					<div class="line"></div>
+					<p>Run a Python CGI script</p>
+					<a href="python-cgi.html" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">CGI PHP</h2>
+					<div class="line"></div>
+					<p>Run a PHP CGI script</p>
+					<a href="php-cgi.html" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">CGI BASH</h2>
+					<div class="line"></div>
+					<p>Run a Bash CGI script</p>
+					<a href="bash-cgi.html" class="button">Try</a>
+				</div>
+				<div class="wrapper">
+					<h2 class="subtitle">SET THEMES</h2>
+					<div class="line"></div>
+					<p>Toggle dark/light theme</p>
+					<button id="themeToggle" class="button">Toggle Theme</button>
+				</div>
+			</section>
+			<div class="bigLine"></div>
+			<footer>
+				<p>© 2025 Webserv - A modern HTTP server implementation</p>
+			</footer>
+		</section>
+		<script> 
+			// Theme toggling functionality
+			document.addEventListener('DOMContentLoaded', function() {
+			// Get theme toggle button
+			const themeToggle = document.getElementById('themeToggle');
+			
+			// Check if a theme preference exists in cookies
+			const currentTheme = getCookie('theme') || 'dark'; // Default to dark theme
+			
+			// Apply saved theme or default to dark
+			if (currentTheme === 'light') {
+			document.documentElement.setAttribute('data-theme', 'light');
+			themeToggle.textContent = 'Switch to Dark Mode';
+			} else {
+			document.documentElement.setAttribute('data-theme', 'dark');
+			themeToggle.textContent = 'Switch to Light Mode';
+			}
+			
+			// Add event listener to toggle button
+			themeToggle.addEventListener('click', function() {
+			// Get current theme
+			const currentTheme = document.documentElement.getAttribute('data-theme');
+			
+			// Toggle theme
+			if (currentTheme === 'dark') {
+			  document.documentElement.setAttribute('data-theme', 'light');
+			  themeToggle.textContent = 'Switch to Dark Mode';
+			  setCookie('theme', 'light', 365); // Save preference for 1 year
+			} else {
+			  document.documentElement.setAttribute('data-theme', 'dark');
+			  themeToggle.textContent = 'Switch to Light Mode';
+			  setCookie('theme', 'dark', 365); // Save preference for 1 year
+			}
+			});
+			
+			// Apply staggered animation to wrappers when they enter viewport
+			const wrappers = document.querySelectorAll('.wrapper');
+			
+			// Create an intersection observer
+			const observer = new IntersectionObserver((entries) => {
+			entries.forEach((entry) => {
+			  if (entry.isIntersecting) {
+			    entry.target.style.visibility = 'visible';
+			    observer.unobserve(entry.target);
+			  }
+			});
+			}, {
+			threshold: 0.1
+			});
+			
+			// Observe each wrapper
+			wrappers.forEach((wrapper, index) => {
+			// Initially hide the wrapper
+			wrapper.style.visibility = 'hidden';
+			observer.observe(wrapper);
+			});
+			});
+			
+			// Cookie utility functions
+			function setCookie(name, value, days) {
+			let expires = '';
+			if (days) {
+			const date = new Date();
+			date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+			expires = '; expires=' + date.toUTCString();
+			}
+			document.cookie = name + '=' + value + expires + '; path=/';
+			}
+			
+			function getCookie(name) {
+			const nameEQ = name + '=';
+			const ca = document.cookie.split(';');
+			for (let i = 0; i < ca.length; i++) {
+			let c = ca[i];
+			while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+			if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+			}
+			return null;
+			}
+		</script>
+	</body>
 </html>
