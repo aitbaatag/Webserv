@@ -44,7 +44,6 @@ void Response::setStatus(int code) {
 }
 
 void Response::setHeaders() {
-    _headers = "";
     std::string contentType = "text/plain";
 
     if (_body.find("html>") != std::string::npos) {
@@ -315,7 +314,6 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
             else {
                 if (client.Srequest.path == route.path) {
                     _filePath = "." + route.root_dir + "/" + route.default_file;
-                    std::cout << "Default file path: " << _filePath << std::endl;
                 } 
                 else {
                     if (route.path != "/") {
@@ -326,9 +324,7 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
                             client.Srequest.path = path;
                         }
                     }
-    
                     _filePath = "." + route.root_dir + client.Srequest.path;
-                    std::cout << "File path: " << _filePath << std::endl;
                 }
                         
                 if (client.Srequest.method == "GET") {
