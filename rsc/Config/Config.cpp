@@ -671,7 +671,7 @@ Route::Route()
 	redirect = "";
 	root_dir = "";
 	directory_listing = false;
-	default_file = "index.html";
+	default_file = "";
 	upload_dir = "";
 
 }

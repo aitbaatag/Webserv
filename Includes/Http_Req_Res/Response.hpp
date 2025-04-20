@@ -27,8 +27,8 @@ public:
 
     void setStatus(int code);
     void setHeaders();
-    void handleFileRequest(const ServerConfig& server, const Route& route);
-    void handleDirectoryListing(const std::string& path, const std::string& uri);
+    void handleFileRequest(const ServerConfig& server, const Route& route, std::string originalPath);
+    void handleDirectoryListing(const std::string& path, const std::string& uri, std::string originalPath);
     void handleCGIRequest(const Request& request, const Route& route);
     void handleDeleteRequest(const Request& request, const Route& route);
     void response_handler(HttpClient &client, int fd, const std::vector<ServerConfig>& servers);
