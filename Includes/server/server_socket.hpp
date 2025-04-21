@@ -62,7 +62,6 @@ class ServerSocket
 		void initialize_socket();
 		void bind_socket();
 		void listen_for_connections();
-		void set_non_blocking();
 	public:
 		ServerSocket();
 		~ServerSocket();

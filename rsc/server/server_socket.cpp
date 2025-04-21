@@ -4,7 +4,7 @@
 
 void ServerSocket::initialize_socket()
 {
-	socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+	socket_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (socket_fd_ < 0)
 		throw std::runtime_error(Logger::error("Failed to create socket: " + std::string(strerror(errno))));
 
@@ -55,12 +55,6 @@ void ServerSocket::listen_for_connections()
 		throw std::runtime_error(Logger::error("Failed to listen on socket: " + std::string(strerror(errno))));
 }
 
-void ServerSocket::set_non_blocking()
-{
-	if (fcntl(socket_fd_, F_SETFL, O_NONBLOCK) < 0)
-		throw std::runtime_error(Logger::error("Failed to set socket to non-blocking: " + std::string(strerror(errno))));
-}
-
 ServerSocket::~ServerSocket()
 {
 	if (socket_fd_ != -1)
@@ -71,32 +65,19 @@ ClientConnectionInfo ServerSocket::accept_connection()
 {
 	sockaddr_in client_addr;
 	ClientConnectionInfo client;
-	socklen_t client_len;
-	client_len = sizeof(client_addr);
+	socklen_t client_len = sizeof(client_addr);
 
 	client.client_socket = accept(socket_fd_, (sockaddr*) &client_addr, &client_len);
 	if (client.client_socket < 0)
 	{
-		if (errno != EAGAIN && errno != EWOULDBLOCK)
-			throw std::runtime_error(Logger::error("Accept error: " + std::string(strerror(errno))));
-		else
-		{
-			client.client_socket = -1;
-			return client;
-		}
+		client.client_socket = -1;
+		return client;
 	}
-	else
-	{
-		if (fcntl(client.client_socket, F_SETFL, O_NONBLOCK) < 0)
-		{
-			close(client.client_socket);
-			throw std::runtime_error(Logger::error("Failed to set client socket to non-blocking: " + std::string(strerror(errno))));
-		}
-	}
-
 	inet_ntop(AF_INET, &(client_addr.sin_addr), client.client_ip, INET_ADDRSTRLEN);
 	return client;
 }
+
+
 
 void ServerSocket::createEpollInstance()
 {
@@ -128,7 +109,6 @@ void ServerSocket::startServer()
 		initialize_socket();
 		bind_socket();
 		listen_for_connections();
-		set_non_blocking();
 		createEpollInstance();
 
 		struct epoll_event ev;
