@@ -1,4 +1,4 @@
-CXX = c++
+CXX = c++ -g3
 
 CXXFLAGS = -I./Includes
 
@@ -31,5 +31,23 @@ clean:
 
 fclean:
 	rm -f $(OBJ) $(TARGET)
+
+
+# Add these variables at the top with other variables
+PROFILE_DURATION = 100
+PROFILE_DATA = app_gprof_data.txt
+CALL_GRAPH = app_call_graph.dot
+
+# Add this target after other targets
+profile: $(TARGET)
+	rm -rf app_* gmo* gpro*
+	@echo "Starting profiling session for $(PROFILE_DURATION) seconds..."
+	@(sleep $(PROFILE_DURATION) && kill -INT $$(pgrep $(TARGET))) & \
+	./$(TARGET)	webserv.conf; \
+	source ~/.venv/bin/activate && \
+	gprof $(TARGET) gmon.out >> $(PROFILE_DATA) && \
+	gprof2dot $(PROFILE_DATA) > $(CALL_GRAPH) && \
+	xdot $(CALL_GRAPH)
+
 
 re: fclean all

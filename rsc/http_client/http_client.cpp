@@ -29,6 +29,7 @@ void HttpClient::append_to_request()
 		request_status_ = Disc;
 		return ;
 	}
+  time_client_ = time(NULL);
   // printf("bytes_received: %ld\n", bytes_received);
   // buffer[bytes_received] = '\0';
   // std::ofstream file("request.txt",

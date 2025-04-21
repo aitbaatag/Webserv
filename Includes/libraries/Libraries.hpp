@@ -4,6 +4,7 @@
 #define MAX_EVENTS 10
 #define MAX_RECV 5048
 #define TIMEOUT 10
+#define EPOLL_TIMEOUT 100
 
 #include <cstddef>
 #include <stdexcept>

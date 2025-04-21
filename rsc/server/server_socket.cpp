@@ -120,6 +120,7 @@ ServerSocket::ServerSocket()
 	server_port_ = -1;
 }
 
+
 void ServerSocket::startServer()
 {
 	try
@@ -129,6 +130,13 @@ void ServerSocket::startServer()
 		listen_for_connections();
 		set_non_blocking();
 		createEpollInstance();
+
+		struct epoll_event ev;
+		ev.events = EPOLLIN;
+		ev.data.fd = socket_fd_;
+		if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket_fd_, &ev) < 0) {
+			throw std::runtime_error("Failed to add server socket to epoll");
+		}
 
 		std::string url = "http://" + (server_host_ == "0.0.0.0" ? "localhost" : server_host_) +
 			":" + std::to_string(server_port_) + "/";
@@ -163,30 +171,49 @@ void ServerSocket::setupServerPort()
 	}
 }
 
-void ServerSocket::processEpollEvents(int ready_fd_count)
+void ServerSocket::processEpollEvents(struct epoll_event *events, int ready_fd_count)
 {
 	for (int i = 0; i < ready_fd_count; i++)
 	{
+		if (clients_.find(events[i].data.fd) == clients_.end())
+			continue;
+
+		if ((events[i].events &EPOLLIN) &&
+			clients_[events[i].data.fd].get_request_status() == InProgress)
 		{
-			if ((events[i].events &EPOLLIN) &&
-				clients_[events[i].data.fd].get_request_status() == InProgress)
+			try
 			{
 				clients_[events[i].data.fd].append_to_request();
 				req.parseIncrementally(clients_[events[i].data.fd]);
 			}
+			catch (const std::exception &e)
+			{
+				std::cerr << Logger::error("Error processing request: " + std::string(e.what()));
+				handleClientDisconnection(events[i].data.fd);
+				continue;
+			}
+		}
 
-			if ((events[i].events &EPOLLOUT) &&
-				clients_[events[i].data.fd].get_request_status() == Complete)
+		if ((events[i].events &EPOLLOUT) &&
+			clients_[events[i].data.fd].get_request_status() == Complete)
+		{
+			try
 			{
 				res.response_handler(clients_[events[i].data.fd], events[i].data.fd, serverConfig_);
-				if (clients_[events[i].data.fd].get_response_status() == Complete) {
+				if (clients_[events[i].data.fd].get_response_status() == Complete)
+				{
 					handleClientDisconnection(events[i].data.fd);
 					std::cout << Logger::info("Client " + std::to_string(events[i].data.fd) + " disconnected");
 				}
 			}
+			catch (const std::exception &e)
+			{
+				std::cerr << Logger::error("Error sending response: " + std::string(e.what()));
+				handleClientDisconnection(events[i].data.fd);
+				continue;
+			}
 		}
 	}
-	
 }
 
 void ServerSocket::handleClientConnection()
@@ -196,14 +223,19 @@ void ServerSocket::handleClientConnection()
 	{
 		clients_[client.client_socket] = HttpClient(client.client_socket);
 		clients_[client.client_socket].client_ip = client.client_ip;
-		std::cout << Logger::info("Client " +  std::to_string(client.client_socket) + " connected from " + client.client_ip + " on port " + std::to_string(server_port_));
-		clients_[client.client_socket].registerEpollEvents(epoll_fd_);
-	}
+		std::cout << Logger::info("Client " + std::to_string(client.client_socket) +
+			" connected from " + client.client_ip +
+			" on port " + std::to_string(server_port_));
 
-	int ready_fd_count = epoll_wait(epoll_fd_, events, MAX_EVENTS, 0);
-	if (ready_fd_count < 0)
-		throw std::runtime_error(Logger::error("epoll_wait failed: " + std::string(strerror(errno))));
-	processEpollEvents(ready_fd_count);
+		struct epoll_event ev;
+		ev.events = EPOLLIN | EPOLLOUT;
+		ev.data.fd = client.client_socket;
+		if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client.client_socket, &ev) < 0)
+		{
+			handleClientDisconnection(client.client_socket);
+			throw std::runtime_error("Failed to add client to epoll");
+		}
+	}
 }
 
 void ServerSocket::handleClientDisconnection(int client_fd)

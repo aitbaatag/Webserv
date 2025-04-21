@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Webserv</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .login-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            background: var(--container-bg);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+        }
+
+        .private-note {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid #ff3b30;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            color: var(--text-color);
+        }
+
+        .private-note strong {
+            color: #ff3b30;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-note {
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid #34c759;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            color: var(--text-color);
+        }
+
+        .welcome-note strong {
+            color: #34c759;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .note-display {
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-group textarea,
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--container-bg);
+            color: var(--text-color);
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .button {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .button.login {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .button.back {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .button.logout {
+            background: #ff3b30;
+            color: white;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        #response-message {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        #response-message.success {
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid #34c759;
+            color: #34c759;
+        }
+
+        #response-message.error {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid #ff3b30;
+            color: #ff3b30;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapperAll container">
+        <div class="titleSection">
+            <h1>Private Notes</h1>
+            <p>Store your private notes securely</p>
+        </div>
+        <div class="login-container">
+            <div id="loginSection">
+                <div class="private-note">
+                    <strong>Create Your Note</strong>
+                    <p>Please enter your username and note below to create your personal entry.</p>
+                </div>
+                <form id="loginForm" action="/login" method="post">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="private_note">Private Note</label>
+                        <textarea id="private_note" name="private_note" placeholder="Enter your private note here..." required></textarea>
+                    </div>
+                    <div class="button-group">
+                        <button type="button" class="button back" onclick="window.history.back()">Go Back</button>
+                        <button type="submit" class="button login">Save Note</button>
+                    </div>
+                </form>
+            </div>
+            <div id="welcomeSection" style="display: none;">
+                <div class="welcome-note">
+                    <strong>Welcome Back!</strong>
+                    <p id="welcomeMessage"></p>
+                    <div class="note-display" id="noteDisplay"></div>
+                </div>
+                <div class="button-group">
+                    <button type="button" class="button logout" onclick="handleLogout()">Logout</button>
+                </div>
+            </div>
+            <div id="response-message"></div>
+        </div>
+        <footer>
+            <p>© 2025 Webserv - Modern HTTP Server</p>
+        </footer>
+    </div>
+
+    <script>
+        // Parse plain text response into object
+        function parseResponse(text) {
+            const lines = text.trim().split('\n');
+            const result = {};
+            lines.forEach(line => {
+                const [key, value] = line.split(':');
+                if (key && value) {
+                    result[key.trim()] = value.trim();
+                }
+            });
+            return result;
+        }
+    
+        // Check session on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/pages/login.html', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: 'action:check_session'
+                });
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    const data = parseResponse(text);
+                    if (data.status === 'success' && data.username && data.note) {
+                        showWelcomeSection(data.username, data.note);
+                    }
+                }
+            } catch (error) {
+                console.error('Session check failed:', error);
+            }
+        });
+    
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const note = document.getElementById('private_note').value;
+            const requestBody = `action:login\nusername:${username}\nnote:${note}`;
+    
+            try {
+                const response = await fetch('/pages/login.html', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: requestBody
+                });
+    
+                if (response.ok) {
+                    const text = await response.text();
+                    const data = parseResponse(text);
+                    if (data.status === 'success') {
+                        showWelcomeSection(data.username, data.note);
+                    } else {
+                        showError(data.message || 'Error saving note');
+                    }
+                } else {
+                    showError('Error saving note. Please try again.');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        });
+    
+        // Handle logout
+        async function handleLogout() {
+            try {
+                const response = await fetch('/pages/login.html', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: 'action:logout'
+                });
+                
+                if (response.ok) {
+                    document.getElementById('loginSection').style.display = 'block';
+                    document.getElementById('welcomeSection').style.display = 'none';
+                    document.getElementById('loginForm').reset();
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    
+        // Show error message
+        function showError(message) {
+            const responseMsg = document.getElementById('response-message');
+            responseMsg.style.display = 'block';
+            responseMsg.className = 'error';
+            responseMsg.textContent = message;
+        }
+    
+        // Show welcome section
+        function showWelcomeSection(username, note) {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('welcomeSection').style.display = 'block';
+            document.getElementById('welcomeMessage').textContent = `Hello, ${username}!`;
+            document.getElementById('noteDisplay').textContent = `Your private note: ${note}`;
+        }
+    </script>
+</body>
+</html>

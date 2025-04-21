@@ -93,6 +93,27 @@ void Response::setHeaders() {
     _headers += "\r\n";
 }
 
+std::string cleanSlashes(const std::string &str)
+{
+	std::string result;
+	bool lastWasSlash = false;
+
+	for (size_t i = 0; i < str.size(); i++)
+	{
+		if (str[i] == '/') {
+			if (!lastWasSlash) {
+				result += str[i];
+				lastWasSlash = true;
+			}
+		}
+		else {
+			result += str[i];
+			lastWasSlash = false;
+		}
+	}
+	return result;
+}
+
 void Response::handleDirectoryListing(const std::string& path, const std::string& uri, std::string originalPath) {
     DIR* dir = opendir(path.c_str());
     
@@ -131,6 +152,7 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
     html << "<tbody>";
 
     struct dirent* entry;
+
     while ((entry = readdir(dir)) != NULL) {
         if (std::string(entry->d_name) == "." || std::string(entry->d_name) == "..") {
             continue;
@@ -141,8 +163,9 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
         
         if (stat(entryPath.c_str(), &entryStat) == 0) {
             html << "<tr>";
-            html << "<td><a href=\"" << originalPath + "/" << entry->d_name << "\">" << entry->d_name << "</a></td>";
-            
+            std::string path = cleanSlashes(originalPath + "/" + entry->d_name);
+            html << "<td><a href=\"" << path << "\">" << entry->d_name << "</a></td>";
+
             if (S_ISDIR(entryStat.st_mode)) {
                 html << "<td>Directory</td>";
             } else {

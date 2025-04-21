@@ -94,7 +94,7 @@ class ServerSocket
 		void handleClientTimeout();
 
 		// Processes epoll events
-		void processEpollEvents(int ready_fd_count);
+		void processEpollEvents(struct epoll_event *events, int ready_fd_count);
 
 		// Starts the server
 		void startServer();
