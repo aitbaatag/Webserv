@@ -330,6 +330,7 @@
 			this.xhr.open('POST', '/submit-upload', true);
 			this.xhr.setRequestHeader('Content-Type', 'text/plain');
 			this.xhr.setRequestHeader('X-File-Name', encodeURIComponent(this.selectedFile.name));
+			this.xhr.timeout = 0
 			
 			this.xhr.upload.onprogress = (event) => {
 			    if (event.lengthComputable) {

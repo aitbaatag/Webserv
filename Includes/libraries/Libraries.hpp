@@ -1,8 +1,8 @@
 #ifndef LIBRARIES_HPP
 #define LIBRARIES_HPP
 
-#define MAX_EVENTS 10
-#define MAX_RECV 20 * 1024 // 20KB
+#define MAX_EVENTS 25
+#define MAX_RECV 1024 * 1024 * 5 // Increase to 5MB 
 #define TIMEOUT 10
 #define EPOLL_TIMEOUT 100
 
