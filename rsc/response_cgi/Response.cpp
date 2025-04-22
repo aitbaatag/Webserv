@@ -1,6 +1,8 @@
 #include "../../Includes/Http_Req_Res/Response.hpp"
+#include "../../Includes/http_client/http_client.hpp"
 
 Response::Response() {
+    _fileStream = NULL;
     _status = "";
     _headers = "";
     _body = "";
@@ -11,8 +13,12 @@ Response::Response() {
 }
 
 Response::~Response() {
-    if (_fileStream.is_open()) {
-        _fileStream.close();
+    if (_fileStream) {
+        if (_fileStream->is_open()) {
+            _fileStream->close();
+        }
+        delete _fileStream;
+        _fileStream = NULL;
     }
 }
 
@@ -209,11 +215,11 @@ void Response::handleFileRequest(const ServerConfig& server, const Route& route,
             }
         }
         
-        _fileStream.open(_filePath.c_str(), std::ios::in | std::ios::binary);
-        if (_fileStream.is_open()) {
-            _fileStream.seekg(0, std::ios::end);
-            _bytesToSend = _fileStream.tellg();
-            _fileStream.seekg(0, std::ios::beg);
+        _fileStream->open(_filePath.c_str(), std::ios::in | std::ios::binary);
+        if (_fileStream->is_open()) {
+            _fileStream->seekg(0, std::ios::end);
+            _bytesToSend = _fileStream->tellg();
+            _fileStream->seekg(0, std::ios::beg);
             
             setStatus(200);
             _body = "";
@@ -432,35 +438,35 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
         _bytesToSend = 0;
         _bytesSent = 0;
         _headersSent = false;
-        _fileStream.close();
+        _fileStream->close();
     }
 }
 
 bool Response::sendResponseChunk(int fd) {
-    if (_fileStream.is_open()) {
-        _fileStream.read(_buffer, BUFFER_SIZE);
-        size_t bytesRead = _fileStream.gcount();
+    if (_fileStream->is_open()) {
+        _fileStream->read(_buffer, BUFFER_SIZE);
+        size_t bytesRead = _fileStream->gcount();
         
         if (bytesRead > 0) {
             ssize_t bytesSent = send(fd, _buffer, bytesRead, 0);
 
             if (bytesSent < 0) {
                 std::cerr << "Error sending file chunk to client FD " << fd << std::endl;
-                _fileStream.close();
+                _fileStream->close();
                 return true;
             }
             
             _bytesSent += bytesSent;
             
-            if (_bytesSent >= _bytesToSend || _fileStream.eof()) {
-                _fileStream.close();
+            if (_bytesSent >= _bytesToSend || _fileStream->eof()) {
+                _fileStream->close();
                 return true;
             }
             
             return false;
         }
         else {
-            _fileStream.close();
+            _fileStream->close();
             return true;
         }
     }

@@ -14,41 +14,41 @@
 class HttpRequest {
 private:
   // parsing functions for request line
-  bool parseRequestLine(HttpClient &client);
+  static bool parseRequestLine(HttpClient &client);
 
   // parsing functions for headers
-  bool parseHeaders(HttpClient &client);
+  static bool parseHeaders(HttpClient &client);
 
   // parsing functions for body
-  bool parseChunkedBody(HttpClient &client);
-  bool parseTextPlainBody(HttpClient &client);
-  void parseChunkSize(HttpClient &client);
-  void parseChunkData(HttpClient &client);
-  void parseChunkEnd(HttpClient &client);
-  bool parseBody(HttpClient &client);
-  size_t getWriteData(char *buffer, size_t buffer_size, HttpClient &client);
+  static bool parseChunkedBody(HttpClient &client);
+  static bool parseTextPlainBody(HttpClient &client);
+  // static void parseChunkSize(HttpClient &client);
+  // static void parseChunkData(HttpClient &client);
+  // static void parseChunkEnd(HttpClient &client);
+  // static bool parseBody(HttpClient &client);
+  // static size_t getWriteData(char *buffer, size_t buffer_size, HttpClient &client);
   // parsing functions for request line
-  bool validMethod(HttpClient &client, const std::string &method);
-  bool isAllowedURICharacter(char ch);
-  bool isValidURI(const std::string &uri);
-  bool validHttpVersion(const std::string &version);
-  char hexToChar(char hex1, char hex2);
-  void decodeRequestURI(HttpClient &client);
-  void parseURI(HttpClient &client);
-  bool parseCRLF(HttpClient &client);
+  static bool validMethod(HttpClient &client, const std::string &method);
+  static bool isAllowedURICharacter(char ch);
+  static bool isValidURI(const std::string &uri);
+  static bool validHttpVersion(const std::string &version);
+  static char hexToChar(char hex1, char hex2);
+  static void decodeRequestURI(HttpClient &client);
+  static void parseURI(HttpClient &client);
+  // static bool parseCRLF(HttpClient &client);
   // parsing functions for headers
-  bool isStrucutredField(const std::string &field);
-  bool ParseStructuredField(HttpClient &client);
-  void SetStartState(HttpClient &client);
-  bool ParseContent_Type(HttpClient &client);
+  // static bool isStrucutredField(const std::string &field);
+  // static bool ParseStructuredField(HttpClient &client);
+  // static void SetStartState(HttpClient &client);
+  static bool ParseContent_Type(HttpClient &client);
 
   // parsing functions for body
-  BodyType determineBodyType(const std::map<std::string, std::string> &headers);
+  static BodyType determineBodyType(const std::map<std::string, std::string> &headers);
 
 public:
   HttpRequest();
-  void parseIncrementally(HttpClient &client);
-  void printRequestLine(HttpClient &client);
+  static void parseIncrementally(HttpClient &client);
+  // static void printRequestLine(HttpClient &client);
 };
 
 unsigned long hexToULong(const std::string &hexStr);

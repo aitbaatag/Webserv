@@ -4,39 +4,13 @@
 
 #include "../Http_Req_Res/StateMachine.hpp"
 #include "../libraries/Libraries.hpp"
+#include "../Http_Req_Res/Response.hpp"
+#include"../Http_Req_Res/Request_Struct.hpp"
+
 
 // Content-Type: text/html; charset=UTF-8; version=1.0
 enum Status { InProgress, Complete, Failed, Disc };
-struct Request {
-  std::string method = "";
-  std::string uri = "";
-  std::string path = "";
-  std::string version = "";
-  std::string query;    // the query string of the request like ?name=ahmed
-  std::string fragment; // the fragment of the request like #section1
-  std::map<std::string, std::string> headers;
-  std::map<std::string, std::string> formData;
-  std::string field_name;
-  std::string field_body;
 
-  // chunked body
-  std::string chunk_size_str;
-  size_t chunk_bytes_read = 0;
-  size_t chunk_size = 0;
-
-  std::string media_type;
-  size_t body_length;
-  std::string boundary;
-  std::string charset;
-  std::string Content_Type;
-  int error_status = 0; // the error status of the request
-  std::string filename;
-  std::string currentHeader;
-  std::string currentData;
-  std::fstream fileStream;
-  size_t body_start_pos = 0;
-  size_t body_write = 0;
-};
 class HttpClient {
 public:
   int socket_fd_;
@@ -52,6 +26,12 @@ public:
 public:
   StateMachine SMrequest;
   Request Srequest;
+
+	Response res;
+
+
+
+
   HttpClient(int socket_fd);
   HttpClient() {};
   int get_socket_fd();

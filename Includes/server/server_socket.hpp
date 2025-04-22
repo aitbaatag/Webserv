@@ -56,8 +56,7 @@ class ServerSocket
 		std::map<int, HttpClient> clients_;	// Map of connected clients
 
 		// delete
-		HttpRequest req;
-		Response res;
+		// Response res;
 
 		void initialize_socket();
 		void bind_socket();

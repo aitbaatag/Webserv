@@ -1,9 +1,12 @@
 #ifndef RESPONSE_HPP
 #define RESPONSE_HPP
 
+
 #include "../libraries/Libraries.hpp"
-#include "../../Includes/http_client/http_client.hpp"
-#include "../../Includes/Config/Config.hpp"
+#include "../Config/Config.hpp"
+#include "../Http_Req_Res/Request_Struct.hpp"
+
+class HttpClient;
 
 
 class Response {
@@ -15,7 +18,7 @@ private:
     size_t _bytesToSend;
     size_t _bytesSent;
     bool _headersSent;
-    std::ifstream _fileStream;
+    std::ifstream *_fileStream;
     
     // Buffer for reading files in chunks
     static const size_t BUFFER_SIZE = 8192;
@@ -25,6 +28,7 @@ public:
     Response();
     ~Response();
 
+    void creatFilestream() {_fileStream = new std::ifstream();};
     void setStatus(int code);
     void setHeaders();
     void handleFileRequest(const ServerConfig& server, const Route& route, std::string originalPath);

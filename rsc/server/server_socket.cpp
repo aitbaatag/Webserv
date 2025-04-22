@@ -164,7 +164,7 @@ void ServerSocket::processEpollEvents(struct epoll_event *events, int ready_fd_c
 			try
 			{
 				clients_[events[i].data.fd].append_to_request();
-				req.parseIncrementally(clients_[events[i].data.fd]);
+				HttpRequest::parseIncrementally(clients_[events[i].data.fd]);
 			}
 			catch (const std::exception &e)
 			{
@@ -179,7 +179,7 @@ void ServerSocket::processEpollEvents(struct epoll_event *events, int ready_fd_c
 		{
 			try
 			{
-				res.response_handler(clients_[events[i].data.fd], events[i].data.fd, serverConfig_);
+				clients_[events[i].data.fd].res.response_handler(clients_[events[i].data.fd], events[i].data.fd, serverConfig_);
 				if (clients_[events[i].data.fd].get_response_status() == Complete)
 				{
 					handleClientDisconnection(events[i].data.fd);
@@ -202,6 +202,7 @@ void ServerSocket::handleClientConnection()
 	if (client.client_socket > 0)
 	{
 		clients_[client.client_socket] = HttpClient(client.client_socket);
+		clients_[client.client_socket].res.creatFilestream();
 		clients_[client.client_socket].client_ip = client.client_ip;
 		std::cout << Logger::info("Client " + std::to_string(client.client_socket) +
 			" connected from " + client.client_ip +
