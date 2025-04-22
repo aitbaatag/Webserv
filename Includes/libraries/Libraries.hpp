@@ -1,40 +1,35 @@
 #ifndef LIBRARIES_HPP
-# define LIBRARIES_HPP
+#define LIBRARIES_HPP
 
 #define MAX_EVENTS 10
-#define MAX_RECV 5048
+#define MAX_RECV 20 * 1024 // 20KB
 #define TIMEOUT 10
 #define EPOLL_TIMEOUT 100
 
-#include <cstddef>
-#include <stdexcept>
-#include <ctime>
-#include <limits>
+#include <algorithm>
 #include <arpa/inet.h>
+#include <cctype>
 #include <cerrno>
+#include <cstddef>
 #include <cstring>
+#include <ctime>
+#include <dirent.h>
+#include <fstream>
+#include <iostream>
+#include <limits>
+#include <map>
 #include <netinet/in.h>
+#include <set>
+#include <sstream>
+#include <stdexcept>
+#include <stdio.h>
+#include <string>
 #include <sys/epoll.h>
 #include <sys/socket.h>
-#include <iostream>
-#include <map>
-#include <vector>
-#include <fstream>
-#include <sstream>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <set>
-#include <string>
-#include <algorithm>
-#include <cctype>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <sys/types.h>
-#include <dirent.h>
+#include <sys/wait.h>
 #include <unistd.h>
+#include <vector>
 
 #endif

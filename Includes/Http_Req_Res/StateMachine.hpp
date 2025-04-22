@@ -1,3 +1,4 @@
+
 #ifndef STATEMACHINE_HPP
 #define STATEMACHINE_HPP
 
@@ -8,7 +9,6 @@ enum StateHeaders {
   STATE_HEADER_VALUE,
   STATE_COLON,
   STATE_HEADER_CRLF,
-  STATE_STRUCUTRE_FIELD,
   STATE_HEADER_DELIMITER,
   STATE_HEADER_DELIMITER2,
   STATE_SPACE,
@@ -21,17 +21,7 @@ enum StateChunk {
   STATE_CHUNK_LF, // Line Feed like '\n' after '\r'
   STATE_CHUNK_CRLF
 };
-enum Text_plain { createFile, writeFile, checkFile };
-enum StateStructuredField {
-  STATE_START,
-  STATE_CONTENT_LENGTH,
-  STATE_DATE,
-  STATE_CONTENT_TYPE,
-  STATE_CACHE_CONTROL,
-  STATE_AUTHORIZATION,
-  STATE_SET_COOKIE,
-  STATE_STRUCTURED_FIELD_END
-};
+enum Text_plain { createFile, ValidData, writeFile, checkFile };
 enum ParseState {
   STATE_REQUEST_LINE,
   STATE_HEADERS,
@@ -48,7 +38,6 @@ public:
   StateRequestLine stateRequestLine;
   ParseState state;
   StateHeaders stateHeaders;
-  StateStructuredField stateStructuredField;
   StateChunk stateChunk;
   Text_plain stateTextPlain;
   BodyType bodyType;

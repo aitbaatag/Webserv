@@ -18,11 +18,13 @@ struct Request {
   std::map<std::string, std::string> formData;
   std::string field_name;
   std::string field_body;
-  std::string chunkSizeStr;
-  int chunkSize;
-  std::string chunkData;
+
+  // chunked body
+  std::string chunk_size_str;
+  size_t chunk_bytes_read = 0;
+  size_t chunk_size = 0;
+
   std::string media_type;
-  size_t chunk_size;
   size_t body_length;
   std::string boundary;
   std::string charset;
@@ -51,7 +53,7 @@ public:
   StateMachine SMrequest;
   Request Srequest;
   HttpClient(int socket_fd);
-  HttpClient(){};
+  HttpClient() {};
   int get_socket_fd();
   Status get_request_status();
   Status get_response_status();
@@ -62,7 +64,7 @@ public:
   char *get_request_buffer();
   void set_request_status(Status status);
   void set_response_status(Status status);
-  size_t get_client_time() {return time_client_;};
+  size_t get_client_time() { return time_client_; };
   std::string get_client_ip() { return client_ip; };
 };
 

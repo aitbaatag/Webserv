@@ -54,12 +54,11 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
     case STATE_CRLF:
       if (c == '\n') {
         client.SMrequest.state = STATE_HEADERS;
-        if (reqBuff[pos] == '\n') {
-          pos++; // Skip the '\n'
-        }
+        pos++; // Skip the '\n'
         client.update_pos(pos);
         if (pos >= client.bytes_received) {
           client.update_pos(0);
+          return false;
         }
         return true; // Successfully parsed the request line
       } else {
@@ -102,9 +101,11 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
         break;
       }
       case CHUNKED: {
-        if (parseChunkedBody(client))
+        std::cout << "Chunked" << std::endl;
+        if (parseChunkedBody(client)) {
           client.SMrequest.state = STATE_COMPLETE;
-        break;
+        }
+        return;
       }
       case TEXT_PLAIN: {
         std::cout << "Text Plain" << std::endl;
