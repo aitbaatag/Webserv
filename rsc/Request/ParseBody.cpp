@@ -1,3 +1,4 @@
+
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include "../../Includes/Http_Req_Res/StateMachine.hpp"
 #include <cstdarg>
@@ -134,9 +135,9 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
         return false; // Need more data
       }
       char c = reqBuff[pos - client.get_pos()];
+
       if (c == '\r') {
         pos++;
-        // Check if we have enough data for LF
         if (pos >= client.bytes_received) {
           client.update_pos(pos);
           return false; // Need more data
@@ -148,15 +149,19 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
           client.SMrequest.stateChunk = STATE_CHUNK_SIZE;
           client.Srequest.chunk_size_str.clear();
         } else {
-          std::cerr << "Error: Expected LF after chunk data CR" << std::endl;
+          std::cerr << "Expected LF after chunk data CR" << std::endl;
           client.Srequest.error_status = 400; // Bad Request
           client.set_request_status(Failed);
           client.Srequest.fileStream.close();
           return true;
         }
+      } else if (c == '\n') {
+        pos++;
+        client.SMrequest.stateChunk = STATE_CHUNK_SIZE;
+        client.Srequest.chunk_size_str.clear();
       } else {
-        printf("c: %d\n", c);
-        std::cerr << "Error: Expected CR after chunk data --" << std::endl;
+        std::cerr << "Expected CR or LF after chunk data, got: " << (int)c
+                  << std::endl;
         client.Srequest.error_status = 400; // Bad Request
         client.set_request_status(Failed);
         client.Srequest.fileStream.close();
@@ -166,14 +171,18 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
     }
 
     case STATE_CHUNK_END: {
+      std::cout << "Final chunk detected, finishing chunked transfer"
+                << std::endl;
       if (pos >= client.bytes_received) {
         client.update_pos(pos);
         return false; // Need more data
       }
       char c = reqBuff[pos - client.get_pos()];
+      std::cout << "End char found: " << (int)c << " ('" << c << "')"
+                << std::endl; // Debug print
+
       if (c == '\r') {
         pos++;
-        // Check if we have enough data for LF
         if (pos >= client.bytes_received) {
           client.update_pos(pos);
           return false; // Need more data
@@ -183,8 +192,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
           pos++;
           std::cout << "Chunked transfer complete. Total bytes: "
                     << client.Srequest.body_write << std::endl;
-
-          // Close file if open
           if (client.Srequest.fileStream.is_open()) {
             client.Srequest.fileStream.close();
           }
@@ -192,6 +199,16 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
           client.update_pos(pos);
           return true;
         }
+      } else if (c == '\n') {
+        pos++;
+        std::cout << "Chunked transfer complete. Total bytes: "
+                  << client.Srequest.body_write << std::endl;
+        if (client.Srequest.fileStream.is_open()) {
+          client.Srequest.fileStream.close();
+        }
+
+        client.update_pos(pos);
+        return true;
       }
 
       std::cerr << "Invalid format at end of chunked transfer" << std::endl;
