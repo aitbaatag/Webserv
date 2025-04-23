@@ -164,7 +164,7 @@ void ServerSocket::processEpollEvents(struct epoll_event *events, int ready_fd_c
 			try
 			{
 				clients_[events[i].data.fd].append_to_request();
-				HttpRequest::parseIncrementally(clients_[events[i].data.fd]);
+				HttpRequest::parseIncrementally(clients_[events[i].data.fd], serverConfig_);
 			}
 			catch (const std::exception &e)
 			{
@@ -175,7 +175,7 @@ void ServerSocket::processEpollEvents(struct epoll_event *events, int ready_fd_c
 		}
 
 		if ((events[i].events &EPOLLOUT) &&
-			clients_[events[i].data.fd].get_request_status() == Complete)
+			(clients_[events[i].data.fd].get_request_status() == Complete || clients_[events[i].data.fd].get_request_status() == Failed))
 		{
 			try
 			{

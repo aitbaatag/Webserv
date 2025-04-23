@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
-import cgi
-import time
+import sys
 
-# En-têtes HTTP requis
-print("Content-Type: text/html\r\n\r\n")
-#time.sleep(10)
-# Récupérer les données du formulaire
-form = cgi.FieldStorage()
-name = form.getvalue("name")
-age = form.getvalue("age")
+# Read the raw input from the POST request
+input_data = sys.stdin.read()
 
-#sleep(10)  # Simuler un traitement long
+# Parse the plain text input (e.g., "name=John\nage=30")
+data = dict(item.split('=') for item in input_data.splitlines() if '=' in item)
 
-# Générer le contenu HTML avec les informations de l'utilisateur
+# Extract the values for "name" and "age"
+name = data.get("name", "Unknown")
+age = data.get("age", "Unknown")
+
+# Generate the HTML content
 html_content = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -21,27 +20,17 @@ html_content = f"""
     <meta charset="UTF-8">
     <title>Informations de l'Utilisateur</title>
     <style>
-				@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-
         body {{
-            font-family: 'Inter', sans-serif;
+            font-family: Arial, sans-serif;
             background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: #333;
-        }}
-        .container {{
             text-align: center;
+            padding: 2rem;
         }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Bienvenue, {name}!</h1>
-        <p>Votre âge est {age} ans.</p>
-    </div>
+    <h1>Welcome, {name}!</h1>
+    <p>You are {age} years old.</p>
 </body>
 </html>
 """

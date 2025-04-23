@@ -7,6 +7,7 @@ Response::Response() {
     _headers = "";
     _body = "";
     _filePath = "";
+    _contentType = "text/plain";
     _bytesToSend = 0;
     _bytesSent = 0;
     _headersSent = false;
@@ -50,10 +51,8 @@ void Response::setStatus(int code) {
 }
 
 void Response::setHeaders() {
-    std::string contentType = "text/plain";
-
     if (_body.find("html>") != std::string::npos) {
-        contentType = "text/html";
+        _contentType = "text/html";
     }
     else {
         std::map<std::string, std::string> mimeTypes;
@@ -72,20 +71,17 @@ void Response::setHeaders() {
         mimeTypes[".pdf"] = "application/pdf";
         mimeTypes[".zip"] = "application/zip";
         mimeTypes[".txt"] = "text/plain";
-        mimeTypes[".py"] = "text/html";
-        mimeTypes[".php"] = "text/html";
-
         size_t dotPos = _filePath.find_last_of(".");
 
         if (dotPos != std::string::npos) {
             std::string extension = _filePath.substr(dotPos);
             if (mimeTypes.find(extension) != mimeTypes.end()) {
-                contentType = mimeTypes[extension];
+                _contentType = mimeTypes[extension];
             }
         }
     }
     
-    _headers += "Content-Type: " + contentType + "\r\n";
+    _headers += "Content-Type: " + _contentType + "\r\n";
     
     char buffer[100];
     time_t now = time(0);
@@ -197,11 +193,11 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
     setStatus(200);
 }
 
-
 void Response::handleFileRequest(const ServerConfig& server, const Route& route, std::string originalPath) {
     struct stat fileStat;
     
     if (stat(_filePath.c_str(), &fileStat) == 0) {
+        std::cout << "File exists: " << _filePath << std::endl;
         if (S_ISDIR(fileStat.st_mode)) {
             if (route.directory_listing) {
                 handleDirectoryListing(_filePath, route.path, originalPath);
@@ -220,9 +216,7 @@ void Response::handleFileRequest(const ServerConfig& server, const Route& route,
             _fileStream->seekg(0, std::ios::end);
             _bytesToSend = _fileStream->tellg();
             _fileStream->seekg(0, std::ios::beg);
-            
             setStatus(200);
-            _body = "";
         }
         else {
             setStatus(403);
@@ -231,14 +225,21 @@ void Response::handleFileRequest(const ServerConfig& server, const Route& route,
         }
     }
     else {
+        std::cout << "File does not exist: " << _filePath << std::endl;
         setStatus(404);
         if (server.error_page.find("404") != server.error_page.end()) {
             std::string errorPagePath = "." + server.error_page.at("404");
             struct stat fileStat;
 
             if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
-                _filePath = errorPagePath;
-                return (handleFileRequest(server, route, originalPath));
+                _fileStream->open(errorPagePath.c_str(), std::ios::in | std::ios::binary);
+                if (_fileStream->is_open()) {
+                    _fileStream->seekg(0, std::ios::end);
+                    _bytesToSend = _fileStream->tellg();
+                    _fileStream->seekg(0, std::ios::beg);
+                    _contentType = "text/html";
+                    return;
+                }
             }
         }
         _body = "<html><body><h1>404 Not Found</h1><p>The requested resource could not be found.</p></body></html>";
@@ -246,7 +247,124 @@ void Response::handleFileRequest(const ServerConfig& server, const Route& route,
     }
 }
 
+const ServerConfig& Response::findMatchingServer(const std::vector<ServerConfig>& servers, const Request& request) {
+    for (size_t i = 0; i < servers.size(); i++) {
+        const ServerConfig& server = servers[i];
+        
+        for (size_t j = 0; j < server.server_names.size(); j++) {
+            if (server.server_names[j] == request.headers.at("Host")) {
+                return server;
+            }
+        }
+    }
+    
+    return servers[0];
+}
+
+const Route& Response::findMatchingRoute(const ServerConfig& server, const std::string& path) {
+    std::string bestMatch = "";
+    size_t bestMatchIndex = 0;
+    
+    for (size_t i = 0; i < server.routes.size(); i++) {
+        if (server.routes[i].path == path) {
+            return server.routes[i];
+        }
+    }
+    
+    for (size_t i = 0; i < server.routes.size(); i++) {
+        const std::string& routePath = server.routes[i].path;
+        
+        if (path.compare(0, routePath.length(), routePath) == 0) {
+            if (routePath.length() > bestMatch.length()) {
+                bestMatch = routePath;
+                bestMatchIndex = i;
+            }
+        }
+    }
+    
+    if (!bestMatch.empty()) {
+        return server.routes[bestMatchIndex];
+    }
+    
+    for (size_t i = 0; i < server.routes.size(); i++) {
+        if (server.routes[i].path == "/") {
+            return server.routes[i];
+        }
+    }
+    return server.routes[0];
+}
+
+void Response::resolveFilePath(std::string& request_path, const Route& route) {
+    if (request_path == route.path) {
+        _filePath = "." + route.root_dir + "/" + route.default_file;
+    } 
+    else {
+        if (route.path != "/") {
+            std::string path = request_path;
+            size_t pos = path.find(route.path);
+            if (pos != std::string::npos) {
+                path.erase(pos, route.path.length());
+                request_path = path;
+            }
+        }
+        _filePath = "." + route.root_dir + request_path;
+    }
+}
+
+void Response::handleGetRequest(const Request& request, const Route& route, const ServerConfig& server) {
+    std::cout << "GET request for file: " << _filePath << std::endl;
+    size_t dotPos = _filePath.find_last_of(".");
+    
+    if (dotPos != std::string::npos) {
+        std::string extension = _filePath.substr(dotPos);
+        if (route.cgi_extension.find(extension) != route.cgi_extension.end()) {
+            std::cout << "GET cgi request for file: " << _filePath << std::endl;
+            handleCGIRequest(request, route);
+        }
+        else {
+            handleFileRequest(server, route, request.path);
+        }
+    }
+    
+}
+
+void Response::handlePostRequest(Request& request, const Route& route) {
+    std::cout << "POST request for file: " << _filePath << std::endl;
+    size_t dotPos = _filePath.find_last_of(".");
+    
+    if (dotPos != std::string::npos) {
+        std::string extension = _filePath.substr(dotPos);
+        if (route.cgi_extension.find(extension) != route.cgi_extension.end()) {
+            std::cout << "POST cgi request for file: " << _filePath << std::endl;
+            handleCGIRequest(request, route);
+        }
+        else if (!route.upload_dir.empty()) {
+            std::string FileName = request.headers.at("X-File-Name").c_str();
+            if (!FileName.empty()) {
+                setStatus(201);
+                rename(request.filename.c_str(), ("." + route.upload_dir + "/" + FileName).c_str());
+                _body = "<html><body><h1>201 Created</h1><p>File uploaded successfully.</p></body></html>";
+                request.fileStream.close();
+            }
+            else {
+                unlink(request.filename.c_str());
+                setStatus(500);
+                _body = "<html><body><h1>500 Internal Server Error</h1><p>Failed to save uploaded file.</p></body></html>";
+                request.fileStream.close();
+            }
+            std::cout << "uploaded successfully: " << request.filename << std::endl;
+            _bytesToSend = _body.size();
+        }
+        else {
+            setStatus(403);
+            _body = "<html><body><h1>403 Forbidden</h1><p></p></body></html>";
+            _bytesToSend = _body.size();
+        }
+    }
+}
+
 void Response::handleDeleteRequest(const Request& request, const Route& route) {
+    std::cout << "DELETE request for file: " << _filePath << std::endl;
     struct stat fileStat;
 
     if (stat(_filePath.c_str(), &fileStat) != 0) {
@@ -275,53 +393,6 @@ void Response::handleDeleteRequest(const Request& request, const Route& route) {
     _bytesToSend = _body.size();
 }
 
-const ServerConfig& Response::findMatchingServer(const std::vector<ServerConfig>& servers, const Request& request) {
-    for (size_t i = 0; i < servers.size(); i++) {
-        const ServerConfig& server = servers[i];
-
-        for (size_t j = 0; j < server.server_names.size(); j++) {
-            if (server.server_names[j] == request.headers.at("Host")) {
-                return server;
-            }
-        }
-    }
-
-    return servers[0];
-}
-
-const Route& Response::findMatchingRoute(const ServerConfig& server, const std::string& path) {
-    std::string bestMatch = "";
-    size_t bestMatchIndex = 0;
-
-    for (size_t i = 0; i < server.routes.size(); i++) {
-        if (server.routes[i].path == path) {
-            return server.routes[i];
-        }
-    }
-
-    for (size_t i = 0; i < server.routes.size(); i++) {
-        const std::string& routePath = server.routes[i].path;
-        
-        if (path.compare(0, routePath.length(), routePath) == 0) {
-            if (routePath.length() > bestMatch.length()) {
-                bestMatch = routePath;
-                bestMatchIndex = i;
-            }
-        }
-    }
-
-    if (!bestMatch.empty()) {
-        return server.routes[bestMatchIndex];
-    }
-
-    for (size_t i = 0; i < server.routes.size(); i++) {
-        if (server.routes[i].path == "/") {
-            return server.routes[i];
-        }
-    }
-    return server.routes[0];
-}
-
 void Response::response_handler(HttpClient &client, int fd, const std::vector<ServerConfig>& servers) {
     if (!_headersSent) {
         if (client.Srequest.error_status != 0) {
@@ -332,7 +403,7 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
         else {
             const ServerConfig& server = findMatchingServer(servers, client.Srequest);
             const Route& route = findMatchingRoute(server, client.Srequest.path);
-            std::cout << "Route path: " << route.path << std::endl;
+            // std::cout << "Route path: " << route.path << std::endl;
             
             if (!route.redirect.empty()) {
                 setStatus(301);
@@ -341,61 +412,15 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
                 _bytesToSend = 0;
             }
             else {
-                if (client.Srequest.path == route.path) {
-                    _filePath = "." + route.root_dir + "/" + route.default_file;
-                } 
-                else {
-                    if (route.path != "/") {
-                        std::string path = client.Srequest.path;
-                        size_t pos = path.find(route.path);
-                        if (pos != std::string::npos) {
-                            path.erase(pos, route.path.length());
-                            client.Srequest.path = path;
-                        }
-                    }
-                    _filePath = "." + route.root_dir + client.Srequest.path;
-                }
+                std::cout << "request path: " << client.Srequest.path << std::endl;
+                std::cout << "Request method: " << client.Srequest.method << std::endl;
+                resolveFilePath(client.Srequest.path, route);
                         
                 if (client.Srequest.method == "GET") {
-                    size_t dotPos = _filePath.find_last_of(".");
-    
-                    if (dotPos != std::string::npos) {
-                        std::string extension = _filePath.substr(dotPos);
-                        if (route.cgi_extension.find(extension) != route.cgi_extension.end()) {
-                            handleCGIRequest(client.Srequest, route);
-                        }
-                        else {
-                            handleFileRequest(server, route, client.Srequest.path);
-                        }
-                    }
-                    else {
-                        handleFileRequest(server, route, client.Srequest.path);
-                    }
+                    handleGetRequest(client.Srequest, route, server);
                 }
                 else if (client.Srequest.method == "POST") {
-                    size_t dotPos = _filePath.find_last_of(".");
-    
-                    if (dotPos != std::string::npos) {
-                        std::string extension = _filePath.substr(dotPos);
-                        
-                        if (route.cgi_extension.find(extension) != route.cgi_extension.end()) {
-                            handleCGIRequest(client.Srequest, route);
-                        }
-                        // else if (!route.upload_dir.empty()) {
-                        //     if () {
-                        //         setStatus(201);
-                        //         _body = "<html><body><h1>201 Created</h1><p>File uploaded successfully.</p></body></html>";
-                        //     }
-                        //     else {
-                        //         setStatus(500);
-                        //         _body = "<html><body><h1>500 Internal Server Error</h1><p>Failed to save uploaded file.</p></body></html>";
-                        //     }
-                        //     _bytesToSend = _body.size();
-                        // }
-                    }
-                    else {
-                        handleFileRequest(server, route, client.Srequest.path);
-                    }
+                    handlePostRequest(client.Srequest, route);
                 }
                 else if (client.Srequest.method == "DELETE") {
                     handleDeleteRequest(client.Srequest, route);
@@ -429,16 +454,9 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
     bool completed = sendResponseChunk(fd);
     
     if (completed) {
+        std::cout << "Response body : " << _body << std::endl;
         std::cout << "Sent full response to client FD " << fd << std::endl;
         client.set_response_status(Complete);
-        _status = "";
-        _headers = "";
-        _body = "";
-        _filePath = "";
-        _bytesToSend = 0;
-        _bytesSent = 0;
-        _headersSent = false;
-        _fileStream->close();
     }
 }
 

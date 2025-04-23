@@ -19,9 +19,9 @@ struct Request {
   std::string chunk_size_str;
   size_t chunk_bytes_read = 0;
   size_t chunk_size = 0;
-
+  std::string body = "";
   std::string media_type;
-  size_t body_length;
+  size_t body_length = 0;
   std::string boundary;
   std::string charset;
   std::string Content_Type;

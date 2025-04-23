@@ -3,7 +3,7 @@
 
 size_t get_current_time() { return (size_t)time(NULL); }
 
-HttpClient::HttpClient(int socket_fd) : SMrequest() {
+HttpClient::HttpClient(int socket_fd) : SMrequest(){
   socket_fd_ = socket_fd;
   pos_ = 0;
   request_status_ = InProgress;

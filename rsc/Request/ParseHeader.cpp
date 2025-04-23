@@ -26,12 +26,12 @@ bool HttpRequest::ParseContent_Type(HttpClient &client) {
   std::string boundary;
   size_t semicolonPos = field_body.find(';');
   media_type = field_body.substr(0, semicolonPos);
-  if (!ValidMediaType(media_type)) {
-    client.Srequest.error_status = 415; // Unsupported Media Type
-    client.set_request_status(Failed);
-    std::cout << "Unsupported Media Type" << std::endl;
-    return false;
-  }
+  // if (!ValidMediaType(media_type)) {
+  //   client.Srequest.error_status = 415; // Unsupported Media Type
+  //   client.set_request_status(Failed);
+  //   std::cout << "Unsupported Media Type" << std::endl;
+  //   return false;
+  // }
   field_body = field_body.substr(semicolonPos + 1);
   field_body = trim(field_body);
   std::istringstream field_body_stream(field_body);
@@ -55,7 +55,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
     char c = reqBuff[pos];
     switch (client.SMrequest.stateHeaders) {
     case STATE_HEADER_NAME:
-      std::cout << "Header Name" << std::endl;
       if ((c > 32 && c < 127) && c != ':') {
         client.SMrequest.stateHeaders = STATE_HEADER_NAME;
         client.Srequest.field_name += c;
@@ -66,7 +65,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       }
       break;
     case STATE_HEADER_VALUE:
-      std::cout << "Header Value" << std::endl;
       if (c == '\r') {
         client.SMrequest.stateHeaders = STATE_HEADER_CRLF;
       } else if (c >= 32 && c < 127) {
@@ -77,7 +75,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       }
       break;
     case STATE_SPACE:
-      std::cout << "Header Space" << std::endl;
       if (c > 32 && c < 127) {
         client.SMrequest.stateHeaders = STATE_HEADER_VALUE;
       } else {
@@ -85,7 +82,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       }
       continue;
     case STATE_COLON:
-      std::cout << "Header Colon" << std::endl;
       if (c == ' ') {
         client.SMrequest.stateHeaders = STATE_SPACE;
       } else {
@@ -93,7 +89,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       }
       break;
     case STATE_HEADER_CRLF:
-      std::cout << "Header CRLF" << std::endl;
       if (c == '\n') {
         client.Srequest.headers[client.Srequest.field_name] =
             client.Srequest.field_body;
@@ -126,7 +121,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       }
       break;
     case STATE_HEADER_DELIMITER:
-      std::cout << "Header Delimiter" << std::endl;
       if (c == '\r') {
         client.SMrequest.stateHeaders = STATE_HEADER_DELIMITER2;
         break;
@@ -134,7 +128,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
         client.SMrequest.stateHeaders = STATE_HEADER_NAME;
       continue;
     case STATE_HEADER_DELIMITER2:
-      std::cout << "Header Delimiter2" << std::endl;
       if (c == '\n') {
         client.SMrequest.state = STATE_BODY;
         pos++;
@@ -146,12 +139,11 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
         client.SMrequest.stateHeaders = STATE_ERROR;
       break;
     case STATE_ERROR:
-      std::cout << "Error jj" << std::endl;
       client.Srequest.field_name.clear();
       client.Srequest.field_body.clear();
       client.Srequest.error_status = 400; // Bad Request
       client.set_request_status(Failed);
-      std::cout << "Bad Request jj" << std::endl;
+      std::cout << "Bad Request" << std::endl;
       return false;
     }
     pos++;

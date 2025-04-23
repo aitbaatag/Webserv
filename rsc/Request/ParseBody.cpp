@@ -6,16 +6,15 @@
 #include <iterator>
 #include <string>
 
-bool HttpRequest::parseChunkedBody(HttpClient &client) {
+bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
   char *reqBuff = client.get_request_buffer() + client.get_pos();
-  std::string FileName = "filename_" + std::to_string(client.socket_fd_);
+  client.Srequest.filename = "." + route.upload_dir + "/" + "filename_" + std::to_string(client.socket_fd_);
   size_t to_write = 0;
   size_t pos = client.get_pos();
 
   while (true) {
     switch (client.SMrequest.stateChunk) {
     case STATE_CHUNK_SIZE: {
-      std::cout << "Parsing chunk size" << std::endl;
       if (client.Srequest.chunk_size_str.empty() &&
           client.Srequest.chunk_bytes_read == 0) {
         client.Srequest.chunk_size = 0;
@@ -60,7 +59,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
     }
 
     case STATE_CHUNK_LF: {
-      std::cout << "Expecting LF after chunk size" << std::endl;
       if (pos >= client.bytes_received) {
         client.update_pos(pos);
         return false; // Need more data
@@ -78,7 +76,7 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
 
           if (!client.Srequest.fileStream.is_open()) {
             client.Srequest.fileStream.open(
-                FileName, std::ios::out | std::ios::binary | std::ios::trunc);
+                client.Srequest.filename, std::ios::out | std::ios::binary | std::ios::trunc);
             if (!client.Srequest.fileStream.is_open()) {
               std::cerr << "Error opening file for chunked data" << std::endl;
               client.Srequest.error_status = 500;
@@ -97,7 +95,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
     }
 
     case STATE_CHUNK_DATA: {
-      std::cout << "Reading chunk data" << std::endl;
       // Calculate how much data we can process
       size_t remaining =
           client.Srequest.chunk_size - client.Srequest.chunk_bytes_read;
@@ -129,7 +126,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
     }
 
     case STATE_CHUNK_CRLF: {
-      std::cout << "Expecting CRLF after chunk data" << std::endl;
       if (pos >= client.bytes_received) {
         client.update_pos(pos);
         return false; // Need more data
@@ -171,8 +167,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
     }
 
     case STATE_CHUNK_END: {
-      std::cout << "Final chunk detected, finishing chunked transfer"
-                << std::endl;
       if (pos >= client.bytes_received) {
         client.update_pos(pos);
         return false; // Need more data
@@ -203,10 +197,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
         pos++;
         std::cout << "Chunked transfer complete. Total bytes: "
                   << client.Srequest.body_write << std::endl;
-        if (client.Srequest.fileStream.is_open()) {
-          client.Srequest.fileStream.close();
-        }
-
         client.update_pos(pos);
         return true;
       }
@@ -224,24 +214,26 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
 
   return true;
 }
-bool HttpRequest::parseTextPlainBody(HttpClient &client) {
-  std::string FileName = "filename_" + std::to_string(client.socket_fd_);
+bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
+  client.Srequest.filename = "." + route.upload_dir + "/" + "filename_" + std::to_string(client.socket_fd_);
   char *dataBuff = client.get_request_buffer() + client.get_pos();
   size_t to_write = 0;
 
-  if (client.Srequest.body_length == 0 &&
-      client.Srequest.headers.find("Content-Length") !=
-          client.Srequest.headers.end()) {
+  std::cout << "content length: " << client.Srequest.body_length
+            << " bytes" << std::endl;
+
+  // check if content length header is present
+  if (client.Srequest.body_length <= 0) {
     std::cerr << "Empty body not allowed" << std::endl;
     client.Srequest.error_status = 411; // Length Required
+    client.set_request_status(Failed);
     return true;
   }
   while (true) {
     switch (client.SMrequest.stateTextPlain) {
     case createFile: {
-      std::cout << "Create File" << std::endl;
       client.Srequest.fileStream.open(
-          FileName, std::ios::out | std::ios::binary | std::ios::trunc);
+          client.Srequest.filename, std::ios::out | std::ios::binary | std::ios::trunc);
       if (!client.Srequest.fileStream.is_open()) {
         std::cerr << "Error opening file" << std::endl;
         client.Srequest.error_status = 500;
@@ -252,7 +244,6 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
       continue;
     }
     case ValidData: {
-      std::cout << "ValidData" << std::endl;
       if (client.Srequest.body_write < client.Srequest.body_length) {
 
         size_t pos = client.get_pos();
@@ -267,18 +258,27 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
       continue;
     }
     case writeFile: {
-      std::cout << "Write File" << std::endl;
-      std::cout << client.Srequest.body_write << std::endl;
       if (to_write > 0) {
-        std::cout << client.Srequest.body_write << std::endl;
-        client.Srequest.fileStream.write(dataBuff, to_write);
-        if (!client.Srequest.fileStream) {
-          std::cerr << "Failed to write to file: " << FileName << std::endl;
-          client.Srequest.error_status = 500;
-          client.set_request_status(Failed);
-          client.Srequest.fileStream.close();
-          return true;
+        ///////
+        size_t dotPos = client.Srequest.path.find_last_of(".");
+    
+        if (dotPos != std::string::npos) {
+            std::string extension = client.Srequest.path.substr(dotPos);
+            if (route.cgi_extension.find(extension) != route.cgi_extension.end()) {
+              client.Srequest.body += std::string(dataBuff, to_write);
+            }
         }
+        //////
+        else {
+          client.Srequest.fileStream.write(dataBuff, to_write);
+          if (!client.Srequest.fileStream) {
+            std::cerr << "Failed to write to file: " << client.Srequest.filename << std::endl;
+            client.Srequest.error_status = 500;
+            client.set_request_status(Failed);
+            client.Srequest.fileStream.close();
+            return true;
+        }
+      }
         client.Srequest.body_write += to_write;
         client.update_pos(0);
       }
@@ -293,8 +293,7 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
     case checkFile: {
       std::cout << "Check File: Completed " << client.Srequest.body_write << "/"
                 << client.Srequest.body_length << " bytes" << std::endl;
-
-      client.Srequest.fileStream.close();
+        client.set_request_status(Complete);
       return true; // Fully processed
     }
     }

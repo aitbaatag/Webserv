@@ -20,8 +20,8 @@ private:
   static bool parseHeaders(HttpClient &client);
 
   // parsing functions for body
-  static bool parseChunkedBody(HttpClient &client);
-  static bool parseTextPlainBody(HttpClient &client);
+  static bool parseChunkedBody(HttpClient &client, const Route &route);
+  static bool parseTextPlainBody(HttpClient &client, const Route &route);
   // static void parseChunkSize(HttpClient &client);
   // static void parseChunkData(HttpClient &client);
   // static void parseChunkEnd(HttpClient &client);
@@ -47,7 +47,7 @@ private:
 
 public:
   HttpRequest();
-  static void parseIncrementally(HttpClient &client);
+  static void parseIncrementally(HttpClient &client, const std::vector<ServerConfig>& servers);
   // static void printRequestLine(HttpClient &client);
 };
 

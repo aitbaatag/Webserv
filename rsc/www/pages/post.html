@@ -121,7 +121,7 @@
                 const response = await fetch('/submit', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Type': 'text/plain',
                     },
                     body: `name=${encodeURIComponent(name)}`
                 });

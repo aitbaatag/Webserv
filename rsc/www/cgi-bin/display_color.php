@@ -1,15 +1,14 @@
 #!/usr/bin/env php
 <?php
 
+// Read the raw input from the POST request
+$input = file_get_contents('php://input');
 
-// Récupérer la couleur sélectionnée par l'utilisateur
-$color = isset($_POST['color']) ? $_POST['color'] : 'white'; 
+// Parse the plain text input (e.g., "color=red")
+parse_str(str_replace("\n", "&", $input), $data);
 
-// Assurez-vous que la couleur est une des options autorisées pour éviter tout code malveillant
-$valid_colors = ['red', 'blue', 'green', 'yellow', 'purple'];
-if (!in_array($color, $valid_colors)) {
-    $color = 'white'; // couleur par défaut si non valide
-}
+// Extract the color value
+$color = isset($data['color']) ? $data['color'] : 'white';
 
 ?>
 
@@ -17,28 +16,17 @@ if (!in_array($color, $valid_colors)) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Color Page</title>
+    <title>Selected Color</title>
     <style>
-				@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-
         body {
-            font-family: 'Inter', sans-serif;
             background-color: <?= htmlspecialchars($color) ?>;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: #333;
-        }
-        .container {
+            font-family: Arial, sans-serif;
             text-align: center;
+            padding: 2rem;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Your Selected Color is: <?= htmlspecialchars(ucfirst($color)) ?></h1>
-        <p>The background color of this page is now <?= htmlspecialchars($color) ?>.</p>
-    </div>
+    <h1>The selected color is <?= htmlspecialchars($color) ?>!</h1>
 </body>
 </html>

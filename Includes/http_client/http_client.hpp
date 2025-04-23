@@ -26,11 +26,7 @@ public:
 public:
   StateMachine SMrequest;
   Request Srequest;
-
 	Response res;
-
-
-
 
   HttpClient(int socket_fd);
   HttpClient() {};
