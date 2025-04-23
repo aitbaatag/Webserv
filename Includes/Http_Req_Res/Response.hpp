@@ -39,7 +39,7 @@ public:
     void handlePostRequest(Request& request, const Route& route);
     void handleDeleteRequest(const Request& request, const Route& route);
     void response_handler(HttpClient &client, int fd, const std::vector<ServerConfig>& servers);
-    bool sendResponseChunk(int fd);
+    bool sendResponseChunk(int fd, HttpClient &client);
     static const ServerConfig& findMatchingServer(const std::vector<ServerConfig>& servers, const Request& request);
     static const Route& findMatchingRoute(const ServerConfig& server, const std::string& path);
 };

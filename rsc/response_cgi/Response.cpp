@@ -150,7 +150,7 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
     html << "</div>";
     html << "<div class=\"directory-container\">";
     html << "<table class=\"files-table\">";
-    html << "<thead><tr><th>Name</th><th>Type</th></tr></thead>";
+    html << "<thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Last Modified</th></tr></thead>";
     html << "<tbody>";
 
     struct dirent* entry;
@@ -170,9 +170,28 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
 
             if (S_ISDIR(entryStat.st_mode)) {
                 html << "<td>Directory</td>";
+                html << "<td>-</td>";
             } else {
                 html << "<td>File</td>";
+                // Format file size in human-readable format
+                std::string sizeStr;
+                off_t size = entryStat.st_size;
+                if (size >= 1024 * 1024) {
+                    sizeStr = std::to_string(size / (1024 * 1024)) + " MB";
+                } else if (size >= 1024) {
+                    sizeStr = std::to_string(size / 1024) + " KB";
+                } else {
+                    sizeStr = std::to_string(size) + " B";
+                }
+                html << "<td>" << sizeStr << "</td>";
             }
+
+            // Format last modified time
+            char timeBuf[100];
+            struct tm* timeinfo = localtime(&entryStat.st_mtime);
+            strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", timeinfo);
+            html << "<td>" << timeBuf << "</td>";
+            
             html << "</tr>";
         }
     }
@@ -451,28 +470,29 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
         _bytesSent = 0;
     }
     
-    bool completed = sendResponseChunk(fd);
+    bool completed = sendResponseChunk(fd, client);
     
     if (completed) {
-        std::cout << "Response body : " << _body << std::endl;
+        // std::cout << "Response body : " << _body << std::endl;
         std::cout << "Sent full response to client FD " << fd << std::endl;
         client.set_response_status(Complete);
     }
 }
 
-bool Response::sendResponseChunk(int fd) {
+bool Response::sendResponseChunk(int fd, HttpClient &client) {
     if (_fileStream->is_open()) {
         _fileStream->read(_buffer, BUFFER_SIZE);
         size_t bytesRead = _fileStream->gcount();
         
         if (bytesRead > 0) {
             ssize_t bytesSent = send(fd, _buffer, bytesRead, 0);
-
+            
             if (bytesSent < 0) {
                 std::cerr << "Error sending file chunk to client FD " << fd << std::endl;
                 _fileStream->close();
                 return true;
             }
+            client.time_client_ = time(NULL);
             
             _bytesSent += bytesSent;
             
@@ -490,12 +510,13 @@ bool Response::sendResponseChunk(int fd) {
     }
     else if (_bytesToSend > 0) {
         ssize_t bytesSent = send(fd, _body.c_str() + _bytesSent, _bytesToSend - _bytesSent, 0);
+        client.time_client_ = time(NULL);
 
         if (bytesSent < 0) {
             std::cerr << "Error sending response body to client FD " << fd << std::endl;
             return true;
         }
-        
+
         _bytesSent += bytesSent;
         
         if (_bytesSent >= _bytesToSend) {

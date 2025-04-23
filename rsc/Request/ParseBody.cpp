@@ -219,8 +219,8 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
   char *dataBuff = client.get_request_buffer() + client.get_pos();
   size_t to_write = 0;
 
-  std::cout << "content length: " << client.Srequest.body_length
-            << " bytes" << std::endl;
+  // std::cout << "content length: " << client.Srequest.body_length
+  //           << " bytes" << std::endl;
 
   // check if content length header is present
   if (client.Srequest.body_length <= 0) {

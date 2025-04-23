@@ -126,6 +126,7 @@
                     <tr>
                         <th>Select</th>
                         <th>Name</th>
+                        <th>Type</th>
                         <th>Size</th>
                         <th>Last Modified</th>
                     </tr>
@@ -151,7 +152,7 @@
     <script>
         async function loadFiles() {
             try {
-                const response = await fetch('/pages/');
+                const response = await fetch('/list/');
                 const html = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
@@ -162,15 +163,17 @@
                 for (let i = 1; i < rows.length; i++) {
                     const row = rows[i];
                     const cells = row.querySelectorAll('td');
-                    if (cells.length === 3) {
+                    if (cells.length >= 4) {
                         const fileName = cells[0].querySelector('a').textContent;
-                        const fileSize = cells[1].textContent;
-                        const lastModified = cells[2].textContent;
+                        const fileType = cells[1].textContent;
+                        const fileSize = cells[2].textContent;
+                        const lastModified = cells[3].textContent;
                         
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td><input type="radio" name="fileSelect" class="file-select" value="${fileName}"></td>
                             <td>${fileName}</td>
+                            <td>${fileType}</td>
                             <td>${fileSize}</td>
                             <td>${lastModified}</td>
                         `;
@@ -199,7 +202,7 @@
             if (!selectedFile) return;
             
             try {
-                const response = await fetch(`/pages/${selectedFile.value}`, {
+                const response = await fetch(`/list/${selectedFile.value}`, {
                     method: 'DELETE'
                 });
                 

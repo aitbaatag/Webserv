@@ -68,6 +68,7 @@ ClientConnectionInfo ServerSocket::accept_connection()
 	socklen_t client_len = sizeof(client_addr);
 
 	client.client_socket = accept(socket_fd_, (sockaddr*) &client_addr, &client_len);
+	std::cout << client.client_socket << std::endl;
 	if (client.client_socket < 0)
 	{
 		client.client_socket = -1;

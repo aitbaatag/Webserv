@@ -123,7 +123,7 @@ void HttpRequest::parseIncrementally(HttpClient &client, const std::vector<Serve
         return;
       }
       case TEXT_PLAIN: {
-        std::cout << "Text Plain" << std::endl;
+        // std::cout << "Text Plain" << std::endl;
         if (parseTextPlainBody(client, route)) {
           client.SMrequest.state = STATE_COMPLETE;
         }

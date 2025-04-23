@@ -6,13 +6,14 @@ void Response::handleCGIRequest(const Request& request, const Route& route) {
     env["REQUEST_METHOD"] = request.method;
     env["PATH_INFO"] = _filePath;
     env["QUERY_STRING"] = request.query;
-    env["CONTENT_LENGTH"] = std::to_string(request.body.size()); // Ensure correct length
+    env["CONTENT_LENGTH"] = request.body.size();
     env["CONTENT_TYPE"] = request.headers.count("Content-Type") ? request.headers.at("Content-Type") : "text/plain";
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
     env["SCRIPT_FILENAME"] = _filePath;
     env["REDIRECT_STATUS"] = "200";
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
 
+    // sleep(5);
     // std::cout << "content: " << request.body << std::endl;
 
     std::vector<char*> envp;

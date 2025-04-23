@@ -25,7 +25,6 @@ void HttpClient::append_to_request() {
     return;
   }
   time_client_ = time(NULL);
-  printf("bytes_received: %ld\n", bytes_received);
   // buffer[bytes_received] = '\0';
   // std::ofstream file("request.txt",
   //                    std::ios::out | std::ios::app | std::ios::binary);
