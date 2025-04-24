@@ -79,7 +79,8 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
   return false;
 }
 
-void HttpRequest::parseIncrementally(HttpClient &client, const std::vector<ServerConfig>& servers) {
+void HttpRequest::parseIncrementally(HttpClient &client,
+                                     const std::vector<ServerConfig> &servers) {
   while (true) {
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
@@ -92,13 +93,14 @@ void HttpRequest::parseIncrementally(HttpClient &client, const std::vector<Serve
         return;
       }
     case STATE_BODY: {
-      const ServerConfig& server = Response::findMatchingServer(servers, client.Srequest);
-      const Route& route = Response::findMatchingRoute(server, client.Srequest.path);
+      const ServerConfig &server =
+          Response::findMatchingServer(servers, client.Srequest);
+      const Route &route =
+          Response::findMatchingRoute(server, client.Srequest.path);
       for (int i = 0; i < route.accepted_methods.size(); i++) {
         if (client.Srequest.method == route.accepted_methods[i]) {
           break;
-        }
-        else if (i == route.accepted_methods.size() - 1) {
+        } else if (i == route.accepted_methods.size() - 1) {
           client.Srequest.error_status = 405;
           client.set_request_status(Failed);
           std::cout << "Method Not Allowed" << std::endl;

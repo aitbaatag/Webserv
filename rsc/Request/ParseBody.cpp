@@ -8,7 +8,8 @@
 
 bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
   char *reqBuff = client.get_request_buffer() + client.get_pos();
-  client.Srequest.filename = "." + route.upload_dir + "/" + "filename_" + std::to_string(client.socket_fd_);
+  client.Srequest.filename = "." + route.upload_dir + "/" + "filename_" +
+                             std::to_string(client.socket_fd_);
   size_t to_write = 0;
   size_t pos = client.get_pos();
 
@@ -75,8 +76,9 @@ bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
           client.Srequest.chunk_bytes_read = 0;
 
           if (!client.Srequest.fileStream.is_open()) {
-            client.Srequest.fileStream.open(
-                client.Srequest.filename, std::ios::out | std::ios::binary | std::ios::trunc);
+            client.Srequest.fileStream.open(client.Srequest.filename,
+                                            std::ios::out | std::ios::binary |
+                                                std::ios::trunc);
             if (!client.Srequest.fileStream.is_open()) {
               std::cerr << "Error opening file for chunked data" << std::endl;
               client.Srequest.error_status = 500;
@@ -215,12 +217,10 @@ bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
   return true;
 }
 bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
-  client.Srequest.filename = "." + route.upload_dir + "/" + "filename_" + std::to_string(client.socket_fd_);
+  client.Srequest.filename = "." + route.upload_dir + "/" + "filename_" +
+                             std::to_string(client.socket_fd_);
   char *dataBuff = client.get_request_buffer() + client.get_pos();
   size_t to_write = 0;
-
-  // std::cout << "content length: " << client.Srequest.body_length
-  //           << " bytes" << std::endl;
 
   // check if content length header is present
   if (client.Srequest.body_length <= 0) {
@@ -232,8 +232,9 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
   while (true) {
     switch (client.SMrequest.stateTextPlain) {
     case createFile: {
-      client.Srequest.fileStream.open(
-          client.Srequest.filename, std::ios::out | std::ios::binary | std::ios::trunc);
+      client.Srequest.fileStream.open(client.Srequest.filename,
+                                      std::ios::out | std::ios::binary |
+                                          std::ios::trunc);
       if (!client.Srequest.fileStream.is_open()) {
         std::cerr << "Error opening file" << std::endl;
         client.Srequest.error_status = 500;
@@ -259,26 +260,15 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
     }
     case writeFile: {
       if (to_write > 0) {
-        ///////
-        size_t dotPos = client.Srequest.path.find_last_of(".");
-    
-        if (dotPos != std::string::npos) {
-            std::string extension = client.Srequest.path.substr(dotPos);
-            if (route.cgi_extension.find(extension) != route.cgi_extension.end()) {
-              client.Srequest.body += std::string(dataBuff, to_write);
-            }
+        client.Srequest.fileStream.write(dataBuff, to_write);
+        if (!client.Srequest.fileStream) {
+          std::cerr << "Failed to write to file: " << client.Srequest.filename
+                    << std::endl;
+          client.Srequest.error_status = 500;
+          client.set_request_status(Failed);
+          client.Srequest.fileStream.close();
+          return true;
         }
-        //////
-        else {
-          client.Srequest.fileStream.write(dataBuff, to_write);
-          if (!client.Srequest.fileStream) {
-            std::cerr << "Failed to write to file: " << client.Srequest.filename << std::endl;
-            client.Srequest.error_status = 500;
-            client.set_request_status(Failed);
-            client.Srequest.fileStream.close();
-            return true;
-        }
-      }
         client.Srequest.body_write += to_write;
         client.update_pos(0);
       }
@@ -293,7 +283,7 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
     case checkFile: {
       std::cout << "Check File: Completed " << client.Srequest.body_write << "/"
                 << client.Srequest.body_length << " bytes" << std::endl;
-        client.set_request_status(Complete);
+      client.set_request_status(Complete);
       return true; // Fully processed
     }
     }
