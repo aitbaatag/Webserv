@@ -34,10 +34,10 @@ public:
     void handleFileRequest(const ServerConfig& server, const Route& route, std::string originalPath);
     void handleDirectoryListing(const std::string& path, const std::string& uri, std::string originalPath);
     void resolveFilePath(std::string& request_path, const Route& route);
-    void handleCGIRequest(const Request& request, const Route& route);
-    void handleGetRequest(const Request& request, const Route& route, const ServerConfig& server);
-    void handlePostRequest(Request& request, const Route& route);
-    void handleDeleteRequest(const Request& request, const Route& route);
+    void handleCGIRequest(Request& request, const Route& route);
+    void handleGetRequest(Request& request, const Route& route, const ServerConfig& server);
+    void handlePostRequest(Request& request, const Route& route, const ServerConfig& server);
+    void handleDeleteRequest(const Request& request, const Route& route, const ServerConfig& server);
     void response_handler(HttpClient &client, int fd, const std::vector<ServerConfig>& servers);
     bool sendResponseChunk(int fd, HttpClient &client);
     static const ServerConfig& findMatchingServer(const std::vector<ServerConfig>& servers, const Request& request);

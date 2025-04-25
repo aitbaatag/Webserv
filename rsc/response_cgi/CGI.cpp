@@ -1,82 +1,64 @@
 #include "../../Includes/Http_Req_Res/Response.hpp"
+#include <sys/stat.h>
+#include <fcntl.h>
 
-void Response::handleCGIRequest(const Request& request, const Route& route) {
-    std::map<std::string, std::string> env;
+void Response::handleCGIRequest(Request& request, const Route& route) {
+    request.fileStream.close();
 
-    env["REQUEST_METHOD"] = request.method;
-    env["PATH_INFO"] = _filePath;
-    env["QUERY_STRING"] = request.query;
-    env["CONTENT_LENGTH"] = request.body.size();
-    env["CONTENT_TYPE"] = request.headers.count("Content-Type") ? request.headers.at("Content-Type") : "text/plain";
-    env["SERVER_PROTOCOL"] = "HTTP/1.1";
-    env["SCRIPT_FILENAME"] = _filePath;
-    env["REDIRECT_STATUS"] = "200";
-    env["GATEWAY_INTERFACE"] = "CGI/1.1";
-
-    // sleep(5);
-    // std::cout << "content: " << request.body << std::endl;
-
+    // Convert headers to environment variables with "HTTP_" prefix
     std::vector<char*> envp;
-    for (const auto& pair : env) {
-        std::string envVar = pair.first + "=" + pair.second;
+    for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
+         it != request.headers.end(); ++it) {
+        std::string headerName = it->first;
+        // Convert header name to uppercase and replace '-' with '_'
+        std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::toupper);
+        std::replace(headerName.begin(), headerName.end(), '-', '_');
+        // Create environment variable string
+        std::string envVar = "HTTP_" + headerName + "=" + it->second;
         envp.push_back(strdup(envVar.c_str()));
     }
-    envp.push_back(nullptr);
+    envp.push_back(NULL);
 
-    int pipeIn[2], pipeOut[2];
-    if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1) {
+    int pipeOut[2];
+    if (pipe(pipeOut) == -1) {
         setStatus(500);
-        _body = "<html><body><h1>500 Internal Server Error</h1><p>Failed to create pipes.</p></body></html>";
+        _body = "<html><body><h1>500 Internal Server Error</h1><p>Pipe creation failed.</p></body></html>";
         return;
     }
 
     pid_t pid = fork();
     if (pid == -1) {
         setStatus(500);
-        _body = "<html><body><h1>500 Internal Server Error</h1><p>Failed to fork process.</p></body></html>";
-        close(pipeIn[0]); close(pipeIn[1]);
-        close(pipeOut[0]); close(pipeOut[1]);
+        _body = "<html><body><h1>500 Internal Server Error</h1><p>Fork failed.</p></body></html>";
+        close(pipeOut[0]);
+        close(pipeOut[1]);
         return;
     }
 
     if (pid == 0) { // Child process
-        dup2(pipeIn[0], STDIN_FILENO);
-        dup2(pipeOut[1], STDOUT_FILENO);
-        close(pipeIn[1]);
-        close(pipeOut[0]);
-
-        char* args[] = {strdup(route.cgi_extension.at(_filePath.substr(_filePath.find_last_of("."))).c_str()), strdup(_filePath.c_str()), nullptr};
-        execve(args[0], args, envp.data());
-        perror("execve failed");
-        exit(1);
-    }
-    else {
-        close(pipeIn[0]);
-        close(pipeOut[1]);
-
-        // Write POST body to pipe and log result
-        ssize_t bytesWritten = write(pipeIn[1], request.body.c_str(), request.body.size());
-        if (bytesWritten == -1) {
-            std::cerr << "Failed to write to CGI input: " << strerror(errno) << std::endl;
-            setStatus(500);
-            _body = "<html><body><h1>500 Internal Server Error</h1><p>Failed to write to CGI input.</p></body></html>";
-            close(pipeIn[1]);
-            close(pipeOut[0]);
-            return;
-        } else if (bytesWritten != static_cast<ssize_t>(request.body.size())) {
-            std::cerr << "Incomplete write to CGI input: " << bytesWritten << " of " << request.body.size() << " bytes" << std::endl;
-            setStatus(500);
-            _body = "<html><body><h1>500 Internal Server Error</h1><p>Incomplete write to CGI input.</p></body></html>";
-            close(pipeIn[1]);
-            close(pipeOut[0]);
-            return;
+        // Open the request body file
+        int file_fd = open(request.filename.c_str(), O_RDONLY);
+        if (file_fd < 0) {
+            perror("open request body file failed");
+            exit(1);
         }
 
-        // Ensure data is flushed
-        fsync(pipeIn[1]);
-        close(pipeIn[1]);
+        dup2(file_fd, STDIN_FILENO);
+        dup2(pipeOut[1], STDOUT_FILENO);
+        close(pipeOut[0]);
 
-        // Read CGI output
+        char* args[] = {
+            strdup(route.cgi_extension.at(_filePath.substr(_filePath.find_last_of("."))).c_str()),
+            strdup(_filePath.c_str()),
+            NULL
+        };
+
+        execve(args[0], args, &envp[0]);
+        perror("execve failed");
+        exit(1);
+    } else { // Parent process
+        close(pipeOut[1]);
+
         char buffer[BUFFER_SIZE];
         ssize_t bytesRead;
         while ((bytesRead = read(pipeOut[0], buffer, BUFFER_SIZE)) > 0) {
@@ -85,19 +67,20 @@ void Response::handleCGIRequest(const Request& request, const Route& route) {
         close(pipeOut[0]);
 
         int status;
-        waitpid(pid, &status, 0);
+        waitpid(pid, &status, WNOHANG);
 
         if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             setStatus(200);
-        }
-        else {
+        } else {
             setStatus(500);
-            _body = "<html><body><h1>500 Internal Server Error</h1><p>CGI execution failed.</p></body></html>";
+            _body = "<html><body><h1>500 Internal Server Error</h1><p>CGI script failed.</p></body></html>";
         }
+
         _bytesToSend = _body.size();
     }
 
-    for (char* var : envp) {
-        free(var);
+    // Free allocated memory
+    for (std::vector<char*>::iterator it = envp.begin(); it != envp.end(); ++it) {
+        if (*it) free(*it);
     }
 }

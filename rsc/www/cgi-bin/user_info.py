@@ -2,6 +2,7 @@
 
 import sys
 
+
 # Read the raw input from the POST request
 input_data = sys.stdin.read()
 

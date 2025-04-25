@@ -330,7 +330,7 @@ void Response::resolveFilePath(std::string& request_path, const Route& route) {
     }
 }
 
-void Response::handleGetRequest(const Request& request, const Route& route, const ServerConfig& server) {
+void Response::handleGetRequest(Request& request, const Route& route, const ServerConfig& server) {
     std::cout << "GET request for file: " << _filePath << std::endl;
     size_t dotPos = _filePath.find_last_of(".");
     
@@ -347,7 +347,7 @@ void Response::handleGetRequest(const Request& request, const Route& route, cons
     
 }
 
-void Response::handlePostRequest(Request& request, const Route& route) {
+void Response::handlePostRequest(Request& request, const Route& route, const ServerConfig& server) {
     std::cout << "POST request for file: " << _filePath << std::endl;
     size_t dotPos = _filePath.find_last_of(".");
     
@@ -376,18 +376,48 @@ void Response::handlePostRequest(Request& request, const Route& route) {
         }
         else {
             setStatus(403);
+            if (server.error_page.find("403") != server.error_page.end()) {
+                std::string errorPagePath = "." + server.error_page.at("403");
+                struct stat fileStat;
+    
+                if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
+                    _fileStream->open(errorPagePath.c_str(), std::ios::in | std::ios::binary);
+                    if (_fileStream->is_open()) {
+                        _fileStream->seekg(0, std::ios::end);
+                        _bytesToSend = _fileStream->tellg();
+                        _fileStream->seekg(0, std::ios::beg);
+                        _contentType = "text/html";
+                        return;
+                    }
+                }
+            }
             _body = "<html><body><h1>403 Forbidden</h1><p></p></body></html>";
             _bytesToSend = _body.size();
         }
     }
 }
 
-void Response::handleDeleteRequest(const Request& request, const Route& route) {
+void Response::handleDeleteRequest(const Request& request, const Route& route, const ServerConfig& server) {
     std::cout << "DELETE request for file: " << _filePath << std::endl;
     struct stat fileStat;
 
     if (stat(_filePath.c_str(), &fileStat) != 0) {
         setStatus(404);
+        if (server.error_page.find("404") != server.error_page.end()) {
+            std::string errorPagePath = "." + server.error_page.at("404");
+            struct stat fileStat;
+
+            if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
+                _fileStream->open(errorPagePath.c_str(), std::ios::in | std::ios::binary);
+                if (_fileStream->is_open()) {
+                    _fileStream->seekg(0, std::ios::end);
+                    _bytesToSend = _fileStream->tellg();
+                    _fileStream->seekg(0, std::ios::beg);
+                    _contentType = "text/html";
+                    return;
+                }
+            }
+        }
         _body = "<html><body><h1>404 Not Found</h1><p>The resource does not exist.</p></body></html>";
         _bytesToSend = _body.size();
         return;
@@ -395,6 +425,21 @@ void Response::handleDeleteRequest(const Request& request, const Route& route) {
     
     if (S_ISDIR(fileStat.st_mode)) {
         setStatus(403);
+        if (server.error_page.find("403") != server.error_page.end()) {
+            std::string errorPagePath = "." + server.error_page.at("403");
+            struct stat fileStat;
+
+            if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
+                _fileStream->open(errorPagePath.c_str(), std::ios::in | std::ios::binary);
+                if (_fileStream->is_open()) {
+                    _fileStream->seekg(0, std::ios::end);
+                    _bytesToSend = _fileStream->tellg();
+                    _fileStream->seekg(0, std::ios::beg);
+                    _contentType = "text/html";
+                    return;
+                }
+            }
+        }
         _body = "<html><body><h1>403 Forbidden</h1><p>Cannot delete a directory.</p></body></html>";
         _bytesToSend = _body.size();
         return;
@@ -427,8 +472,6 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
             if (!route.redirect.empty()) {
                 setStatus(301);
                 _headers = "Location: " + route.redirect + "\r\n";
-                _body = "";
-                _bytesToSend = 0;
             }
             else {
                 std::cout << "request path: " << client.Srequest.path << std::endl;
@@ -439,10 +482,10 @@ void Response::response_handler(HttpClient &client, int fd, const std::vector<Se
                     handleGetRequest(client.Srequest, route, server);
                 }
                 else if (client.Srequest.method == "POST") {
-                    handlePostRequest(client.Srequest, route);
+                    handlePostRequest(client.Srequest, route, server);
                 }
                 else if (client.Srequest.method == "DELETE") {
-                    handleDeleteRequest(client.Srequest, route);
+                    handleDeleteRequest(client.Srequest, route, server);
                 }
                 else {
                     setStatus(501);

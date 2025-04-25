@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>403 - Forbidden</title>
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+		<link rel="stylesheet" href="../style.css"/>
+	</head>
+	<body>
+		<section class="wrapperAll container">
+			<div class="titleSection">
+				<h1>403 - Forbidden</h1>
+				<p>Sorry, you don't have permission to access this page.</p>
+			</div>
+			<div class="bigLine"></div>
+			<section class="features">
+				<div class="wrapper">
+					<h2 class="subtitle">Access Denied</h2>
+					<div class="line"></div>
+					<p>You lack the necessary permissions to view this resource.</p>
+					<a href="/" class="button">Return Home</a>
+				</div>
+			</section>
+			<div class="bigLine"></div>
+			<footer>
+				<p>© 2025 Webserv - A modern HTTP server implementation</p>
+			</footer>
+		</section>
+		<script>
+			// Theme toggling functionality
+			document.addEventListener('DOMContentLoaded', function() {
+				// Check if a theme preference exists in cookies
+				const currentTheme = getCookie('theme') || 'dark'; // Default to dark theme
+				
+				// Apply saved theme or default to dark
+				if (currentTheme === 'light') {
+					document.documentElement.setAttribute('data-theme', 'light');
+				} else {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				}
+				
+				// Apply staggered animation to wrappers when they enter viewport
+				const wrappers = document.querySelectorAll('.wrapper');
+				
+				// Create an intersection observer
+				const observer = new IntersectionObserver((entries) => {
+					entries.forEach((entry) => {
+						if (entry.isIntersecting) {
+							entry.target.style.visibility = 'visible';
+							observer.unobserve(entry.target);
+						}
+					});
+				}, {
+					threshold: 0.1
+				});
+				
+				// Observe each wrapper
+				wrappers.forEach((wrapper, index) => {
+					// Initially hide the wrapper
+					wrapper.style.visibility = 'hidden';
+					observer.observe(wrapper);
+				});
+			});
+			
+			// Cookie utility functions
+			function getCookie(name) {
+				const nameEQ = name + '=';
+				const ca = document.cookie.split(';');
+				for (let i = 0; i < ca.length; i++) {
+					let c = ca[i];
+					while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+					if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+				}
+				return null;
+			}
+		</script>
+	</body>
+</html>

@@ -118,12 +118,12 @@
             const responseText = document.getElementById('responseText');
 
             try {
-                const response = await fetch('/submit', {
+                const response = await fetch('/cgi-bin/display_name.py', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'text/plain',
                     },
-                    body: `name=${encodeURIComponent(name)}`
+                    body: `${encodeURIComponent(name)}`
                 });
 
                 const data = await response.text();

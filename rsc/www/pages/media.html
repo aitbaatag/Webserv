@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Preview File - Webserv</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="../style.css" />
+    <style>
+        .download-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            background: var(--container-bg);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+        }
+
+        .files-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+
+        .files-table th,
+        .files-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .files-table th {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .files-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .file-select {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            appearance: none;
+            cursor: pointer;
+            position: relative;
+            background: var(--container-bg);
+        }
+
+        .file-select:checked {
+            border: 6px solid var(--primary-color);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .button {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+        }
+        .button.download {
+            background: var(--primary-color);
+            color: white;
+        }
+        .button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response-area {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            display: none;
+        }
+        .video-player {
+            margin-top: 2rem;
+            width: 100%;
+            max-width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+        video, img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapperAll container">
+        <div class="titleSection">
+            <h1>Preview File</h1>
+            <p>Select a file to preview (image or video)</p>
+        </div>
+        <div class="download-container">
+            <table class="files-table" id="filesTable">
+                <thead>
+                    <tr>
+                        <th>Select</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th>Last Modified</th>
+                    </tr>
+                </thead>
+                <tbody id="filesList">
+                    <!-- Files will be populated here -->
+                </tbody>
+            </table>
+            <div class="button-group">
+                <button class="button back" onclick="window.history.back()">Go Back</button>
+                <button class="button download" id="playButton" disabled>Preview Selected File</button>
+            </div>
+            <div class="video-player" id="videoPlayerContainer" style="display: none;"></div>
+            <div id="responseArea" class="response-area">
+                <strong>Server Response:</strong>
+                <p id="responseText"></p>
+            </div>
+        </div>
+        <footer>
+            <p>© 2025 Webserv - Modern HTTP Server</p>
+        </footer>
+    </div>
+
+    <script>
+        // Get file type based on extension
+        function getFileType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            
+            // Media types
+            const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif'];
+            const videoTypes = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'mkv', 'flv', 'm4v', '3gp'];
+            const audioTypes = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma'];
+            
+            // Document types
+            const textTypes = ['txt', 'md', 'rtf', 'log', 'json', 'xml', 'csv'];
+            const webTypes = ['html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx'];
+            const codeTypes = {
+                'c': 'C Source',
+                'cpp': 'C++ Source', 
+                'h': 'C/C++ Header', 
+                'hpp': 'C++ Header',
+                'py': 'Python Source',
+                'java': 'Java Source',
+                'cs': 'C# Source',
+                'php': 'PHP Source',
+                'rb': 'Ruby Source',
+                'go': 'Go Source',
+                'rs': 'Rust Source',
+                'swift': 'Swift Source',
+                'kt': 'Kotlin Source',
+                'ts': 'TypeScript Source',
+                'js': 'JavaScript Source',
+                'jsx': 'React JSX',
+                'tsx': 'React TSX',
+                'sh': 'Shell Script',
+                'ps1': 'PowerShell Script',
+                'sql': 'SQL Script'
+            };
+            const officeTypes = {
+                'doc': 'Word Document',
+                'docx': 'Word Document',
+                'xls': 'Excel Spreadsheet',
+                'xlsx': 'Excel Spreadsheet',
+                'ppt': 'PowerPoint',
+                'pptx': 'PowerPoint',
+                'pdf': 'PDF Document',
+                'odt': 'OpenDocument Text',
+                'ods': 'OpenDocument Spreadsheet',
+                'odp': 'OpenDocument Presentation'
+            };
+            const archiveTypes = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso'];
+            
+            // Check file type
+            if (imageTypes.includes(ext)) return 'Image';
+            if (videoTypes.includes(ext)) return 'Video';
+            if (audioTypes.includes(ext)) return 'Audio';
+            if (textTypes.includes(ext)) return 'Text';
+            if (webTypes.includes(ext)) return 'Web';
+            if (codeTypes[ext]) return codeTypes[ext];
+            if (officeTypes[ext]) return officeTypes[ext];
+            if (archiveTypes.includes(ext)) return 'Archive';
+            
+            return 'File'; // Default file type
+        }
+
+        async function loadFiles() {
+            try {
+                const response = await fetch('/upload/');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const rows = doc.querySelectorAll('table tr');
+                const filesList = document.getElementById('filesList');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 4) {
+                        const fileName = cells[0].querySelector('a').textContent;
+                        // Instead of using the server-provided file type, we detect it ourselves
+                        const fileType = getFileType(fileName);
+                        const fileSize = cells[2].textContent;
+                        const lastModified = cells[3].textContent;
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><input type="radio" name="fileSelect" class="file-select" value="${fileName}"></td>
+                            <td>${fileName}</td>
+                            <td>${fileType}</td>
+                            <td>${fileSize}</td>
+                            <td>${lastModified}</td>
+                        `;
+                        filesList.appendChild(tr);
+                    }
+                }
+
+                document.querySelectorAll('.file-select').forEach(radio => {
+                    radio.addEventListener('change', updatePlayButton);
+                });
+            } catch (error) {
+                console.error('Error loading files:', error);
+                showResponse('Error loading files: ' + error.message, 'error');
+            }
+        }
+
+        function updatePlayButton() {
+            const selectedFile = document.querySelector('.file-select:checked');
+            const playButton = document.getElementById('playButton');
+            
+            if (selectedFile) {
+                const fileName = selectedFile.value;
+                const fileType = getFileType(fileName);
+                
+                // Update button text based on file type
+                if (fileType === 'Image') {
+                    playButton.textContent = 'View Image';
+                } else if (fileType === 'Video') {
+                    playButton.textContent = 'Play Video';
+                } else if (fileType === 'Audio') {
+                    playButton.textContent = 'Play Audio';
+                } else {
+                    playButton.textContent = 'Preview File';
+                }
+                
+                playButton.disabled = false;
+            } else {
+                playButton.disabled = true;
+                playButton.textContent = 'Preview Selected File';
+            }
+        }
+
+        function playMedia() {
+            const selectedFile = document.querySelector('.file-select:checked');
+            if (!selectedFile) return;
+
+            const fileName = selectedFile.value;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            const fileType = getFileType(fileName);
+            const mediaContainer = document.getElementById('videoPlayerContainer');
+
+            mediaContainer.innerHTML = '';
+            mediaContainer.style.display = 'block';
+
+            let mediaElement;
+
+            // Handle different media types
+            if (fileType === 'Video') {
+                mediaElement = document.createElement('video');
+                mediaElement.setAttribute('controls', '');
+                mediaElement.innerHTML = `<source src="/upload/${fileName}" type="video/${fileExtension}">Your browser does not support the video tag.`;
+            } else if (fileType === 'Image') {
+                mediaElement = document.createElement('img');
+                mediaElement.src = `/upload/${fileName}`;
+                mediaElement.alt = fileName;
+            } else if (fileType === 'Audio') {
+                mediaElement = document.createElement('audio');
+                mediaElement.setAttribute('controls', '');
+                mediaElement.style.width = '100%';
+                mediaElement.innerHTML = `<source src="/upload/${fileName}" type="audio/${fileExtension}">Your browser does not support the audio tag.`;
+            } else {
+                showResponse('File type not previewable in browser: ' + fileType, 'error');
+                mediaContainer.style.display = 'none';
+                return;
+            }
+
+            mediaContainer.appendChild(mediaElement);
+            showResponse('Now displaying: ' + fileName);
+        }
+
+        function showResponse(message, type = 'success') {
+            const responseArea = document.getElementById('responseArea');
+            const responseText = document.getElementById('responseText');
+            responseText.textContent = message;
+            responseArea.className = `response-area visible ${type}`;
+            responseArea.style.display = 'block';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFiles();
+            document.getElementById('playButton').addEventListener('click', playMedia);
+        });
+    </script>
+</body>
+</html>
