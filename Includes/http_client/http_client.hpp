@@ -15,20 +15,23 @@ class HttpClient {
 public:
   int socket_fd_;
   std::string client_ip;
-  char buffer[MAX_RECV] = {};
+  uint16_t client_port;
+  char buffer[MAX_RECV];
   size_t bytes_received;
   std::string response_buffer_;
   Status request_status_;
   Status response_status_;
-  int pos_; // position in the request_buffer_ to avoid re-parsing the same data
+  int pos_;
   size_t time_client_;
+  size_t time_start_;
+
 
 public:
   StateMachine SMrequest;
   Request Srequest;
 	Response res;
 
-  HttpClient(int socket_fd);
+  HttpClient(int client_socket, std::string client_ip, uint16_t client_port);
   HttpClient() {};
   int get_socket_fd();
   Status get_request_status();
@@ -42,6 +45,7 @@ public:
   void set_response_status(Status status);
   size_t get_client_time() { return time_client_; };
   std::string get_client_ip() { return client_ip; };
+  
 };
 
 #endif

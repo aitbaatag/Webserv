@@ -1,4 +1,4 @@
-CXX = c++ -g3
+CXX = c++ -std=c++98
 
 CXXFLAGS = -I./Includes
 
@@ -14,7 +14,9 @@ SRC = ./rsc/main.cpp \
 		./rsc/Request/Request.cpp \
 		./rsc/Request/RequestUtils.cpp \
 		./rsc/Request/ParseHeader.cpp \
-		./rsc/Request/ParseBody.cpp
+		./rsc/Request/ParseBody.cpp \
+		./rsc/cookies/session.cpp \
+		./rsc/cookies/session_manager.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

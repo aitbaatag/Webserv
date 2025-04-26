@@ -87,53 +87,6 @@ void startServers(std::vector<ServerSocket*> &servers)
 }
 
 
-// void startServers(std::vector<ServerSocket*> &servers)
-// {
-// 	for (size_t i = 0; i < servers.size(); i++)
-// 		servers[i]->startServer();
-// 	while (running)
-// 	{
-// 		for (size_t i = 0; i < servers.size(); ++i)
-// 		{
-// 			struct epoll_event events[MAX_EVENTS];
-// 			int nfds = epoll_wait(servers[i]->getEpollInstanceFd(), events, MAX_EVENTS, EPOLL_TIMEOUT);
-// 			if (nfds > 0)
-// 			{
-// 				for (int j = 0; j < nfds; j++)
-// 				{
-// 					if (events[j].data.fd == servers[i]->get_socket_fd())
-// 						servers[i]->handleClientConnection();
-
-// 					else
-// 						servers[i]->processEpollEvents(events, nfds);
-// 				}
-// 			}
-// 			servers[i]->handleClientTimeout();
-// 		}
-// 	}
-// }
-
-// void startServers(std::vector<ServerSocket*> &servers)
-// {
-// 	
-	
-// 	while (running)
-// 	{
-// 		for (size_t i = 0; i < servers.size(); ++i)
-// 		{
-// 			servers[i]->handleClientConnection();
-// 			servers[i]->handleClientTimeout();
-// 		}
-// 	}
-
-// 	// // Cleanup when loop ends
-//     // std::cout << "Closing all server connections..." << std::endl;
-//     // for (size_t i = 0; i < servers.size(); ++i)
-//     // {
-//     //     servers[i]->closeAllConnections();
-//     // }
-
-// }
 
 int main(int argc, char **argv)
 {

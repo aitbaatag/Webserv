@@ -19,7 +19,7 @@ private:
     size_t _bytesToSend;
     size_t _bytesSent;
     bool _headersSent;
-    std::ifstream *_fileStream;
+    std::ifstream _fileStream;
     
     static const size_t BUFFER_SIZE = 8192;
     char _buffer[BUFFER_SIZE];
@@ -28,7 +28,6 @@ public:
     Response();
     ~Response();
 
-    void creatFilestream() {_fileStream = new std::ifstream();};
     void setStatus(int code);
     void setHeaders();
     void handleFileRequest(const ServerConfig& server, const Route& route, std::string originalPath);
@@ -36,12 +35,13 @@ public:
     void resolveFilePath(std::string& request_path, const Route& route);
     void handleCGIRequest(Request& request, const Route& route);
     void handleGetRequest(Request& request, const Route& route, const ServerConfig& server);
-    void handlePostRequest(Request& request, const Route& route, const ServerConfig& server);
+    void handlePostRequest(Request& request, const Route& route, ServerConfig& server);
     void handleDeleteRequest(const Request& request, const Route& route, const ServerConfig& server);
-    void response_handler(HttpClient &client, int fd, const std::vector<ServerConfig>& servers);
+    void response_handler(HttpClient &client, int fd, std::vector<ServerConfig>& servers);
     bool sendResponseChunk(int fd, HttpClient &client);
-    static const ServerConfig& findMatchingServer(const std::vector<ServerConfig>& servers, const Request& request);
+    static ServerConfig& findMatchingServer(std::vector<ServerConfig> &servers, const Request& request);
     static const Route& findMatchingRoute(const ServerConfig& server, const std::string& path);
+    void handleLoginRequest(Request& request, SessionManager& clientSession_);
 };
 
 #endif

@@ -47,7 +47,7 @@ private:
 
 public:
   HttpRequest();
-  static void parseIncrementally(HttpClient &client, const std::vector<ServerConfig>& servers);
+  static void parseIncrementally(HttpClient &client, std::vector<ServerConfig>& servers);
   // static void printRequestLine(HttpClient &client);
 };
 

@@ -2,6 +2,8 @@
 # define CONFIG_PARSER_HPP
 
 #include "../libraries/Libraries.hpp"
+#include "../cookies/session_manager.hpp"
+
 
 
 void printTokens(const std::vector<std::string > &tokens, std::size_t i);
@@ -70,6 +72,7 @@ struct ServerConfig
 	std::size_t max_body_size;
 	std::vector<Route> routes;
 	ServerFoundDirective Tracker;
+	SessionManager clientSession_;
 	ServerConfig();
 };
 
@@ -93,7 +96,6 @@ class ServerConfigParser {
 		// contructor & deconstructor & public func
 		ServerConfigParser();
 		~ServerConfigParser();
-		std::string formatErrorMessage(LogLevel level, const std::string &message);
 
 		//parsing tokenize
 		void loadConfigFile(int argc, char* argv[]);
@@ -127,8 +129,7 @@ class ServerConfigParser {
 		// Return Servers
 		std::vector<ServerConfig> &getServers() {return servers_;};
 	
-		// Beautiful printer function
-		void printServers() const;
+
 };
 
 #endif

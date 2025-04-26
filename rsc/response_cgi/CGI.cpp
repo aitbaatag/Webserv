@@ -52,7 +52,7 @@ void Response::handleCGIRequest(Request& request, const Route& route) {
             strdup(_filePath.c_str()),
             NULL
         };
-
+        
         execve(args[0], args, &envp[0]);
         perror("execve failed");
         exit(1);
@@ -68,6 +68,8 @@ void Response::handleCGIRequest(Request& request, const Route& route) {
 
         int status;
         waitpid(pid, &status, WNOHANG);
+        std::cerr << "dasdaddsa" << std::endl;
+
 
         if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             setStatus(200);
@@ -83,4 +85,5 @@ void Response::handleCGIRequest(Request& request, const Route& route) {
     for (std::vector<char*>::iterator it = envp.begin(); it != envp.end(); ++it) {
         if (*it) free(*it);
     }
+    unlink(request.filename.c_str());
 }

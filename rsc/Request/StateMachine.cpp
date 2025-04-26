@@ -6,6 +6,6 @@ StateMachine::StateMachine() {
   state = STATE_REQUEST_LINE;
   stateHeaders = STATE_HEADER_NAME;
   stateTextPlain = createFile;
-  stateChunk = STATE_CHUNK_SIZE;
+  stateChunk = STATE_FILE_CREATE;
   bodyType = START_;
 }

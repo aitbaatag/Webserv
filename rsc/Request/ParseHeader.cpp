@@ -99,17 +99,23 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
           if (client.Srequest.field_body.empty()) {
             client.Srequest.error_status = 411; // Length Required
             client.set_request_status(Failed);
-            std::cout << "Length Required" << std::endl;
             return false;
           }
           if (client.Srequest.field_body.find_first_not_of("0123456789") !=
               std::string::npos) {
             client.Srequest.error_status = 400; // Bad Request
             client.set_request_status(Failed);
-            std::cout << "Bad Request" << std::endl;
             return false;
           }
-          client.Srequest.body_length = std::stoull(client.Srequest.field_body);
+          client.Srequest.body_length = std::strtoull(client.Srequest.field_body.c_str(), NULL, 10);
+//           if (client.Srequest.body_length > server.max_body_size)
+// {
+//   client.Srequest.error_status = 413; // Payload Too Large
+//   client.set_request_status(Failed);
+//   std::cerr << "Request body too large: " << client.Srequest.body_length 
+//             << " bytes (max: " << server.max_body_size << " bytes)" << std::endl;
+//   return false;
+// }
         } else if (client.Srequest.field_name == "Content-Type") {
           if (!ParseContent_Type(client)) {
             client.SMrequest.stateHeaders = STATE_ERROR;
@@ -135,8 +141,7 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
         client.SMrequest.state = STATE_BODY;
         pos++;
         client.update_pos(pos);
-        std::cout << "Headers finished, body starts at position: " << pos
-                  << std::endl;
+
         return true;
       } else
         client.SMrequest.stateHeaders = STATE_ERROR;
@@ -146,7 +151,6 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
       client.Srequest.field_body.clear();
       client.Srequest.error_status = 400; // Bad Request
       client.set_request_status(Failed);
-      std::cout << "Bad Request" << std::endl;
       return false;
     }
     pos++;

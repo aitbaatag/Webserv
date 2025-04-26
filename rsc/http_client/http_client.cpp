@@ -3,11 +3,14 @@
 
 size_t get_current_time() { return (size_t)time(NULL); }
 
-HttpClient::HttpClient(int socket_fd) : SMrequest(){
-  socket_fd_ = socket_fd;
+HttpClient::HttpClient(int client_socket, std::string client_ip, uint16_t client_port) : SMrequest(){
+  socket_fd_ = client_socket;
   pos_ = 0;
   request_status_ = InProgress;
   response_status_ = InProgress;
+  this->client_ip = client_ip;
+  this->client_port = client_port;
+  time_start_ = time(NULL);
   time_client_ = get_current_time();
 }
 
@@ -25,11 +28,6 @@ void HttpClient::append_to_request() {
     return;
   }
   time_client_ = time(NULL);
-  // buffer[bytes_received] = '\0';
-  // std::ofstream file("request.txt",
-  //                    std::ios::out | std::ios::app | std::ios::binary);
-  // file.write(buffer, bytes_received);
-  // std::cout << request_buffer_ << std::endl;
 }
 
 void HttpClient::registerEpollEvents(int epoll_fd_) {
