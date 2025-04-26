@@ -29,12 +29,12 @@ bool HttpRequest::ParseContent_Type(HttpClient &client) {
   std::string boundary;
   size_t semicolonPos = field_body.find(';');
   media_type = field_body.substr(0, semicolonPos);
-  // if (!ValidMediaType(media_type)) {
-  //   client.Srequest.error_status = 415; // Unsupported Media Type
-  //   client.set_request_status(Failed);
-  //   std::cout << "Unsupported Media Type" << std::endl;
-  //   return false;
-  // }
+  if (!ValidMediaType(media_type)) {
+    client.Srequest.error_status = 415; // Unsupported Media Type
+    client.set_request_status(Failed);
+    std::cout << "Unsupported Media Type" << std::endl;
+    return false;
+  }
   field_body = field_body.substr(semicolonPos + 1);
   field_body = trim(field_body);
   std::istringstream field_body_stream(field_body);
@@ -107,15 +107,8 @@ bool HttpRequest::parseHeaders(HttpClient &client) {
             client.set_request_status(Failed);
             return false;
           }
-          client.Srequest.body_length = std::strtoull(client.Srequest.field_body.c_str(), NULL, 10);
-//           if (client.Srequest.body_length > server.max_body_size)
-// {
-//   client.Srequest.error_status = 413; // Payload Too Large
-//   client.set_request_status(Failed);
-//   std::cerr << "Request body too large: " << client.Srequest.body_length 
-//             << " bytes (max: " << server.max_body_size << " bytes)" << std::endl;
-//   return false;
-// }
+          client.Srequest.body_length =
+              std::strtoull(client.Srequest.field_body.c_str(), NULL, 10);
         } else if (client.Srequest.field_name == "Content-Type") {
           if (!ParseContent_Type(client)) {
             client.SMrequest.stateHeaders = STATE_ERROR;

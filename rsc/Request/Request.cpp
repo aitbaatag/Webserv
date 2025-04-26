@@ -75,96 +75,88 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
   return false;
 }
 
-void HttpRequest::parseIncrementally(HttpClient &client, std::vector<ServerConfig> &servers)
-{
-	while (true)
-	{
-		switch (client.SMrequest.state)
-		{
-			case STATE_REQUEST_LINE:
-				if (!parseRequestLine(client))
-				{
-					return;
-				}
+void HttpRequest::parseIncrementally(HttpClient &client,
+                                     std::vector<ServerConfig> &servers) {
+  while (true) {
+    switch (client.SMrequest.state) {
+    case STATE_REQUEST_LINE:
+      if (!parseRequestLine(client)) {
+        return;
+      }
 
-				break;
-			case STATE_HEADERS:
-				if (!parseHeaders(client))
-				{
-					return;
-				}
+      break;
+    case STATE_HEADERS:
+      if (!parseHeaders(client)) {
+        return;
+      }
 
-			case STATE_BODY:
-				{
-					ServerConfig &server =
-					Response::findMatchingServer(servers, client.Srequest);
-					const Route &route =
-						Response::findMatchingRoute(server, client.Srequest.path);
-					for (int i = 0; i < route.accepted_methods.size(); i++)
-					{
-						if (client.Srequest.method == route.accepted_methods[i])
-						{
-							break;
-						}
-						else if (i == route.accepted_methods.size() - 1)
-						{
-							client.Srequest.error_status = 405;
-							client.set_request_status(Failed);
-							return;
-						}
-					}
+    case STATE_BODY: {
+      ServerConfig &server =
+          Response::findMatchingServer(servers, client.Srequest);
+      const Route &route =
+          Response::findMatchingRoute(server, client.Srequest.path);
+      for (int i = 0; i < route.accepted_methods.size(); i++) {
+        if (client.Srequest.method == route.accepted_methods[i]) {
+          break;
+        } else if (i == route.accepted_methods.size() - 1) {
+          client.Srequest.error_status = 405;
+          client.set_request_status(Failed);
+          return;
+        }
+      }
 
-					switch (client.SMrequest.bodyType)
-					{
-						case START_:
-							{
-								client.SMrequest.bodyType = determineBodyType(client.Srequest.headers);
-								break;
-							}
+      switch (client.SMrequest.bodyType) {
+      case START_: {
+        client.SMrequest.bodyType = determineBodyType(client.Srequest.headers);
+        if (client.Srequest.body_length > server.max_body_size) {
+          client.Srequest.error_status = 413; // Payload Too Large
+          client.set_request_status(Failed);
+          std::cerr << "Request body too large: " << client.Srequest.body_length
+                    << " bytes (max: " << server.max_body_size << " bytes)"
+                    << std::endl;
+          return;
+        }
 
-						case NO_BODY:
-							{
-								client.SMrequest.state = STATE_COMPLETE;
-								break;
-							}
+        break;
+      }
 
-						case CHUNKED:
-							{
-								if (parseChunkedBody(client, route))
-								{
-									client.SMrequest.state = STATE_COMPLETE;
-									continue;
-								}
+      case NO_BODY: {
+        client.SMrequest.state = STATE_COMPLETE;
+        break;
+      }
 
-								return;
-							}
+      case CHUNKED: {
+        if (parseChunkedBody(client, route)) {
+          client.SMrequest.state = STATE_COMPLETE;
+          continue;
+        }
 
-						case TEXT_PLAIN:
-							{
-								if (parseTextPlainBody(client, route))
-								{
-									client.SMrequest.state = STATE_COMPLETE;
-									continue;
-								}
+        return;
+      }
 
-								return;
-							}
-					}
+      case TEXT_PLAIN: {
+        if (parseTextPlainBody(client, route)) {
+          client.SMrequest.state = STATE_COMPLETE;
+          continue;
+        }
 
-					break;
-				}
+        return;
+      }
+      }
 
-			case STATE_COMPLETE:
-				if (client.Srequest.fileStream.is_open())
-				{
-					client.Srequest.fileStream.flush();
-					client.Srequest.fileStream.seekg(0);
-				}
+      break;
+    }
 
-				client.set_request_status(Complete);
-				return;
-		}
-	}
+    case STATE_COMPLETE:
+      if (client.Srequest.fileStream.is_open()) {
+        client.Srequest.fileStream.flush();
+        client.Srequest.fileStream.seekg(0);
+      }
+
+      client.set_request_status(Complete);
+      return;
+    }
+  }
 }
 // void HttpRequest::printRequestLine(HttpClient &client) {
 //   for (auto const &[key, value] : client.Srequest.headers) {
