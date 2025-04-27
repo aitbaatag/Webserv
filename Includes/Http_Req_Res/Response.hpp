@@ -16,6 +16,7 @@ private:
     std::string _body;
     std::string _filePath;
     std::string _contentType;
+    int _statusCode;
     size_t _bytesToSend;
     size_t _bytesSent;
     bool _headersSent;
@@ -23,8 +24,11 @@ private:
     
     static const size_t BUFFER_SIZE = 8192;
     char _buffer[BUFFER_SIZE];
+public:
+    HttpClient *_client;
 
 public:
+
     Response();
     ~Response();
 

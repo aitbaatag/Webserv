@@ -1,7 +1,8 @@
 
 #include "../../Includes/http_client/http_client.hpp"
+#include "../../Includes/utlis/utils.hpp"
 
-size_t get_current_time() { return (size_t)time(NULL); }
+
 
 HttpClient::HttpClient(int client_socket, std::string client_ip, uint16_t client_port) : SMrequest(){
   socket_fd_ = client_socket;
@@ -10,8 +11,9 @@ HttpClient::HttpClient(int client_socket, std::string client_ip, uint16_t client
   response_status_ = InProgress;
   this->client_ip = client_ip;
   this->client_port = client_port;
-  time_start_ = time(NULL);
-  time_client_ = get_current_time();
+  time_start_ = current_time_in_ms();
+  time_client_ = time(NULL);
+  res._client = this;
 }
 
 int HttpClient::get_socket_fd() { return socket_fd_; }

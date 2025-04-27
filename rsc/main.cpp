@@ -86,10 +86,25 @@ void startServers(std::vector<ServerSocket*> &servers)
 	close(epfd_master);
 }
 
-
+void printServerBanner() {
+    std::cout << "\033[2J\033[1;1H";
+    std::string PEACH_COLOR = "\033[38;2;206;145;120m";
+    std::cout << PEACH_COLOR << Color::BOLD << "\n\n" <<
+        "     ██╗    ██╗███████╗██████╗ ███████╗███████╗██████╗ ██╗   ██╗\n" <<
+        "     ██║    ██║██╔════╝██╔══██╗██╔════╝██╔════╝██╔══██╗██║   ██║\n" <<
+        "     ██║ █╗ ██║█████╗  ██████╔╝███████╗█████╗  ██████╔╝██║   ██║\n" <<
+        "     ██║███╗██║██╔══╝  ██╔══██╗╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝\n" <<
+        "     ╚███╔███╔╝███████╗██████╔╝███████║███████╗██║  ██║ ╚████╔╝ \n" <<
+        "      ╚══╝╚══╝ ╚══════╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  " << 
+        Color::RESET << std::endl;
+    std::cout << Color::GRAY << "                        HTTP Server Implementation" << Color::RESET << std::endl;
+    std::cout << PEACH_COLOR << "                 Made by: alamaoui, kait-baa & orhaddao" << Color::RESET << std::endl;
+    std::cout << std::endl;
+}
 
 int main(int argc, char **argv)
 {
+	printServerBanner();
 	signal(SIGINT, signal_handler);
 	std::vector<ServerSocket*> servers;
 	ServerConfigParser configParser;

@@ -1,11 +1,7 @@
 #include "../../Includes/Http_Req_Res/Response.hpp"
 #include "../../Includes/http_client/http_client.hpp"
-inline std::string to_string(int value)
-{
-	std::ostringstream ss;
-	ss << value;
-	return ss.str();
-}
+#include "../../Includes/utlis/utils.hpp"
+
 
 Response::Response()
 {
@@ -701,6 +697,11 @@ void Response::response_handler(HttpClient &client, int fd, std::vector<ServerCo
 	if (completed)
 	{
 		client.set_response_status(Complete);
+		std::cout << Logger::trace_http("TRACE", _client->client_ip, _client->client_port, 
+			_client->Srequest.method, _client->Srequest.path, 
+			_client->Srequest.version, _client->res._status, 
+			to_string(current_time_in_ms() - _client->time_start_));
+	
 	}
 }
 

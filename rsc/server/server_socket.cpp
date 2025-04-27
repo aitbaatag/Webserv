@@ -1,11 +1,6 @@
 #include "../../Includes/server/server_socket.hpp"
+#include "../../Includes/utlis/utils.hpp"
 
-inline std::string to_string(int value)
-{
-	std::ostringstream ss;
-	ss << value;
-	return ss.str();
-}
 
 void ServerSocket::initialize_socket()
 {
@@ -212,12 +207,10 @@ void ServerSocket::processEpollEvents(struct epoll_event *events, int ready_fd_c
 		{
 			try
 			{
-				std::cout << "Resp 3: " << time(NULL) << std::endl;
 				clients_[events[i].data.fd]->res.response_handler(*(clients_[events[i].data.fd]), events[i].data.fd, serverConfig_);
 				if (clients_[events[i].data.fd]->get_response_status() == Complete)
 				{
 					handleClientDisconnection(events[i].data.fd);
-					std::cout << Logger::info("Client " + to_string(events[i].data.fd) + " disconnected");
 				}
 			}
 
@@ -238,9 +231,6 @@ void ServerSocket::handleClientConnection()
 	{
 		clients_[client.client_socket] = new HttpClient(client.client_socket, client.client_ip, client.client_port);
 		clients_[client.client_socket]->client_ip = client.client_ip;
-		std::cout << Logger::info("Client " + to_string(client.client_socket) +
-			" connected from " + client.client_ip +
-			" on port " + to_string(server_port_));
 
 		struct epoll_event ev;
 		ev.events = EPOLLIN | EPOLLOUT;

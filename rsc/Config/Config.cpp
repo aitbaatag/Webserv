@@ -1,14 +1,7 @@
 #include "../../Includes/Config/Config.hpp"
 #include "../../Includes/server/server_socket.hpp"
-class Logger;
-// ----------------------------------- PARSING CONFIG --------------------------------- //
+#include "../../Includes/utlis/utils.hpp"
 
-inline std::string to_string(int value)
-{
-    std::ostringstream ss;
-    ss << value;
-    return ss.str();
-}
 
 void ServerConfigParser::loadConfigFile(int argc, char *argv[])
 {

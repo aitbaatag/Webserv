@@ -5,6 +5,7 @@ CXXFLAGS = -I./Includes
 TARGET = Webserv
 
 SRC = ./rsc/main.cpp \
+		./rsc/utils/utils.cpp \
 		./rsc/Config/Config.cpp \
 		./rsc/response_cgi/CGI.cpp \
 		./rsc/response_cgi/Response.cpp \
@@ -16,7 +17,7 @@ SRC = ./rsc/main.cpp \
 		./rsc/Request/ParseHeader.cpp \
 		./rsc/Request/ParseBody.cpp \
 		./rsc/cookies/session.cpp \
-		./rsc/cookies/session_manager.cpp
+		./rsc/cookies/session_manager.cpp \
 
 OBJ = $(SRC:.cpp=.o)
 

@@ -23,7 +23,7 @@ public:
   Status response_status_;
   int pos_;
   size_t time_client_;
-  size_t time_start_;
+  unsigned long long	time_start_;
 
 
 public:

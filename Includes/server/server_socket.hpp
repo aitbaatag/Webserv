@@ -20,50 +20,7 @@
 #include <ctime>
 #include <sstream>
 
-class Logger
-{
-	public:
-		static std::string get_timestamp()
-		{
-			time_t now = time(NULL);
-			struct tm *t = localtime(&now);
-			char buffer[20];
-			strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", t);
-			return std::string(buffer);
-		}
 
-	static std::string get_time_only()
-	{
-		time_t now = time(NULL);
-		char buffer[9];
-		strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&now));
-		return std::string(buffer);
-	}
-
-	static std::string info(const std::string &message)
-	{
-		return "[INFO][" + get_time_only() + "] " + message + "\n";
-	}
-
-	static std::string error(const std::string &message)
-	{
-		return "[ERROR][" + get_time_only() + "] " + message + "\n";
-	}
-
-	static std::string trace_http(const std::string &level, const std::string &ip,
-			unsigned short port, const std::string &method, const std::string &path, const std::string &http_version,
-						int status_code,
-						int duration_ms)
-	{
-		std::ostringstream oss;
-		oss << "[" << level << "] " <<
-			"[" << get_timestamp() << "] " <<
-			"[" << ip << ":" << port << "] " <<
-			"\"" << method << " " << path << " " << http_version << "\"" <<
-			" → " << status_code << " (" << duration_ms << "ms)";
-		return oss.str() + "\n";
-	}
-};
 
 
 struct ClientConnectionInfo

@@ -4,12 +4,8 @@
 #include <iostream>
 #include <iterator>
 #include <string>
+#include "../../Includes/utlis/utils.hpp"
 
-inline std::string to_string(int value) {
-  std::ostringstream ss;
-  ss << value;
-  return ss.str();
-}
 
 bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
   char *reqBuff = client.get_request_buffer() + client.get_pos();
