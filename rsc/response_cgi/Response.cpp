@@ -1,6 +1,7 @@
 #include "../../Includes/Http_Req_Res/Response.hpp"
 #include "../../Includes/http_client/http_client.hpp"
 #include "../../Includes/utlis/utils.hpp"
+#include "../../Includes/server/server_socket.hpp"
 
 
 Response::Response()
@@ -18,9 +19,8 @@ Response::Response()
 Response::~Response()
 {
 	if (_fileStream.is_open())
-	{
 		_fileStream.close();
-	}
+	_client = NULL;
 }
 
 void Response::setStatus(int code)
@@ -125,10 +125,10 @@ std::string cleanSlashes(const std::string &str)
 	return result;
 }
 
-void Response::handleDirectoryListing(const std::string& path, const std::string& uri, std::string originalPath)
+void Response::handleDirectoryListing()
 {
     std::ostringstream html;
-    DIR *dir = opendir(path.c_str());
+    DIR *dir = opendir(_filePath.c_str());
     if (!dir)
     {
         setStatus(403);
@@ -140,7 +140,7 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
     html << "<!DOCTYPE html><html lang=\"en\"><head>";
     html << "<meta charset=\"UTF-8\">";
     html << "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">";
-    html << "<title>Directory Listing: " << uri << "</title>";
+    html << "<title>Directory Listing: " << _client->route->path << "</title>";
     html << "<link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\">";
     html << "<link rel=\"stylesheet\" href=\"/style.css\">";
     html << "<style>";
@@ -169,12 +169,12 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
         {
             continue;
         }
-        std::string entryPath = path + "/" + entry->d_name;
+        std::string entryPath = _filePath + "/" + entry->d_name;
         struct stat entryStat;
         if (stat(entryPath.c_str(), &entryStat) == 0)
         {
             html << "<tr>";
-            std::string path = cleanSlashes(originalPath + "/" + entry->d_name);
+            std::string path = cleanSlashes(_client->Srequest.path + "/" + entry->d_name);
             html << "<td><a href=\"" << path << "\">" << entry->d_name << "</a></td>";
             if (S_ISDIR(entryStat.st_mode))
             {
@@ -226,7 +226,7 @@ void Response::handleDirectoryListing(const std::string& path, const std::string
     setStatus(200);
 }
 
-void Response::handleFileRequest(const ServerConfig &server, const Route &route, std::string originalPath)
+void Response::handleFileRequest()
 {
 	struct stat fileStat;
 
@@ -234,9 +234,9 @@ void Response::handleFileRequest(const ServerConfig &server, const Route &route,
 	{
 		if (S_ISDIR(fileStat.st_mode))
 		{
-			if (route.directory_listing)
+			if (_client->route->directory_listing)
 			{
-				handleDirectoryListing(_filePath, route.path, originalPath);
+				handleDirectoryListing();
 				return;
 			}
 			else
@@ -267,9 +267,9 @@ void Response::handleFileRequest(const ServerConfig &server, const Route &route,
 	else
 	{
 		setStatus(404);
-		if (server.error_page.find("404") != server.error_page.end())
+		if (_client->server_config->error_page.find("404") != _client->server_config->error_page.end())
 		{
-			std::string errorPagePath = "." + server.error_page.at("404");
+			std::string errorPagePath = "." + _client->server_config->error_page.at("404");
 			struct stat fileStat;
 
 			if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode))
@@ -291,7 +291,7 @@ void Response::handleFileRequest(const ServerConfig &server, const Route &route,
 	}
 }
 
-ServerConfig &Response::findMatchingServer(std::vector<ServerConfig> &servers, const Request &request)
+ServerConfig *Response::findMatchingServer(std::vector<ServerConfig> &servers, Request &request)
 {
 	for (size_t i = 0; i < servers.size(); i++)
 	{
@@ -301,15 +301,15 @@ ServerConfig &Response::findMatchingServer(std::vector<ServerConfig> &servers, c
 		{
 			if (server.server_names[j] == request.headers.at("Host"))
 			{
-				return server;
+				return &server;
 			}
 		}
 	}
 
-	return servers[0];
+	return &servers[0];
 }
 
-const Route &Response::findMatchingRoute(const ServerConfig &server, const std::string &path)
+Route *Response::findMatchingRoute(ServerConfig &server, std::string &path)
 {
 	std::string bestMatch = "";
 	size_t bestMatchIndex = 0;
@@ -318,7 +318,7 @@ const Route &Response::findMatchingRoute(const ServerConfig &server, const std::
 	{
 		if (server.routes[i].path == path)
 		{
-			return server.routes[i];
+			return &(server.routes[i]);
 		}
 	}
 
@@ -338,56 +338,56 @@ const Route &Response::findMatchingRoute(const ServerConfig &server, const std::
 
 	if (!bestMatch.empty())
 	{
-		return server.routes[bestMatchIndex];
+		return &(server.routes[bestMatchIndex]);
 	}
 
 	for (size_t i = 0; i < server.routes.size(); i++)
 	{
 		if (server.routes[i].path == "/")
 		{
-			return server.routes[i];
+			return &(server.routes[i]);
 		}
 	}
 
-	return server.routes[0];
+	return &(server.routes[0]);
 }
-void Response::resolveFilePath(std::string &request_path, const Route &route)
+void Response::resolveFilePath()
 {
-	if (request_path == route.path)
+	if (_client->Srequest.path == _client->route->path)
 	{
-		_filePath = "." + route.root_dir + "/" + route.default_file;
+		_filePath = "." + _client->route->root_dir + "/" + _client->route->default_file;
 	}
 	else
 	{
-		if (route.path != "/")
+		if (_client->route->path != "/")
 		{
-			std::string path = request_path;
-			size_t pos = path.find(route.path);
+			std::string path = _client->Srequest.path;
+			size_t pos = path.find(_client->route->path);
 			if (pos != std::string::npos)
 			{
-				path.erase(pos, route.path.length());
-				request_path = path;
+				path.erase(pos, _client->route->path.length());
+				_client->Srequest.path = path;
 			}
 		}
 
-		_filePath = "." + route.root_dir + request_path;
+		_filePath = "." + _client->route->root_dir + _client->Srequest.path;
 	}
 }
 
-void Response::handleGetRequest(Request &request, const Route &route, const ServerConfig &server)
+void Response::handleGetRequest()
 {
 	size_t dotPos = _filePath.find_last_of(".");
 
 	if (dotPos != std::string::npos)
 	{
 		std::string extension = _filePath.substr(dotPos);
-		if (route.cgi_extension.find(extension) != route.cgi_extension.end())
+		if ((_client->route->cgi_extension.find(extension)) != _client->route->cgi_extension.end())
 		{
-			handleCGIRequest(request, route);
+			handleCGIRequest();
 		}
 		else
 		{
-			handleFileRequest(server, route, request.path);
+			handleFileRequest();
 		}
 	}
 }
@@ -426,23 +426,12 @@ std::string parseCookies(const std::string &cookieHeader, const std::string &key
 	return "";
 }
 
-void Response::handleLoginRequest(Request &request, SessionManager &clientSession_)
+void Response::handleLoginRequest()
 {
-	// Reload file stream
-	// request.fileStream.close();
-	// request.fileStream.open(request.filename.c_str());
-	// if (!request.fileStream.is_open())
-	// {
-	// 	setStatus(500);
-	// 	_body = "status:error\nmessage:Failed to reopen request file";
-	// 	_bytesToSend = _body.size();
-	// 	return;
-	// }
-
 	std::string action, username, note;
 	std::string line;
 
-	while (std::getline(request.fileStream, line))
+	while (std::getline(_client->Srequest.fileStream, line))
 	{
 		size_t colonPos = line.find(':');
 		if (colonPos != std::string::npos)
@@ -458,18 +447,18 @@ void Response::handleLoginRequest(Request &request, SessionManager &clientSessio
 
 	if (action == "login" && !username.empty())
 	{
-		Session &session = clientSession_.createSession(username, note);
+		Session &session = _client->server_config->clientSession_.createSession(username, note);
 		setStatus(200);
-		_headers = "Set-Cookie: " + clientSession_.generateCookie(session.getSessionId()) + "\r\n";
+		_headers = "Set-Cookie: " + _client->server_config->clientSession_.generateCookie(session.getSessionId()) + "\r\n";
 		_headers += "Content-Type: text/plain\r\n";
 		_body = "status:success\nusername:" + username + "\nnote:" + note;
 	}
 	else if (action == "check_session")
 	{
-		std::string sessionId = parseCookies(request.headers["Cookie"], "sessionId");
-		if (!sessionId.empty() && clientSession_.hasSession(sessionId))
+		std::string sessionId = parseCookies(_client->Srequest.headers["Cookie"], "sessionId");
+		if (!sessionId.empty() && _client->server_config->clientSession_.hasSession(sessionId))
 		{
-			Session &session = clientSession_.getSession(sessionId);
+			Session &session = _client->server_config->clientSession_.getSession(sessionId);
 			setStatus(200);
 			_body = "status:success\nusername:" + session.getUsername() + "\nnote:" + session.getNote();
 		}
@@ -481,10 +470,10 @@ void Response::handleLoginRequest(Request &request, SessionManager &clientSessio
 	}
 	else if (action == "logout")
 	{
-		std::string sessionId = parseCookies(request.headers["Cookie"], "sessionId");
+		std::string sessionId = parseCookies(_client->Srequest.headers["Cookie"], "sessionId");
 		if (!sessionId.empty())
 		{
-			clientSession_.removeSession(sessionId);
+			_client->server_config->clientSession_.removeSession(sessionId);
 		}
 
 		setStatus(200);
@@ -499,43 +488,45 @@ void Response::handleLoginRequest(Request &request, SessionManager &clientSessio
 	_bytesToSend = _body.size();
 }
 
-void Response::handlePostRequest(Request &request, const Route &route, ServerConfig &server)
+void Response::handlePostRequest()
 {
 	size_t dotPos = _filePath.find_last_of(".");
 
 	if (dotPos != std::string::npos)
 	{
 		std::string extension = _filePath.substr(dotPos);
-		if (route.cgi_extension.find(extension) != route.cgi_extension.end())
+		if (_client->route->cgi_extension.find(extension) != _client->route->cgi_extension.end())
 		{
-			handleCGIRequest(request, route);
+			handleCGIRequest();
 		}
-		else if (!route.upload_dir.empty())
+		else if (!_client->route->upload_dir.empty())
 		{
 			std::cout << "upload request for file: " << _filePath << std::endl;
-			if (request.path == "/submit-upload") {
+			if (_client->Srequest.path == "/submit-upload") {
 				setStatus(201);
 				_body = "<html><body> < h1>201 Created</h1 > < p>File uploaded successfully.</p></body></html>";
+				_client->Srequest.filename = "";
 			}
 			else
 			{
-				unlink(request.filename.c_str());
+				unlink(_client->Srequest.filename.c_str());
 				setStatus(500);
 				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
-				request.fileStream.close();
+				_client->Srequest.fileStream.close();
+				_client->Srequest.filename = "";
 			}
 			_bytesToSend = _body.size();
 		}
-		else if (request.path == "/pages/login.html")
+		else if (_client->Srequest.path == "/pages/login.html")
 		{
-			handleLoginRequest(request, server.clientSession_);
+			handleLoginRequest();
 		}
 		else
 		{
 			setStatus(403);
-			if (server.error_page.find("403") != server.error_page.end())
+			if (_client->server_config->error_page.find("403") != _client->server_config->error_page.end())
 			{
-				std::string errorPagePath = "." + server.error_page.at("403");
+				std::string errorPagePath = "." + _client->server_config->error_page.at("403");
 				struct stat fileStat;
 
 				if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode))
@@ -557,16 +548,16 @@ void Response::handlePostRequest(Request &request, const Route &route, ServerCon
 		}
 	}
 }
-void Response::handleDeleteRequest(const Request &request, const Route &route, const ServerConfig &server)
+void Response::handleDeleteRequest()
 {
 	struct stat fileStat;
 
 	if (stat(_filePath.c_str(), &fileStat) != 0)
 	{
 		setStatus(404);
-		if (server.error_page.find("404") != server.error_page.end())
+		if (_client->server_config->error_page.find("404") != _client->server_config->error_page.end())
 		{
-			std::string errorPagePath = "." + server.error_page.at("404");
+			std::string errorPagePath = "." + _client->server_config->error_page.at("404");
 			struct stat fileStat;
 
 			if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode))
@@ -591,9 +582,9 @@ void Response::handleDeleteRequest(const Request &request, const Route &route, c
 	if (S_ISDIR(fileStat.st_mode))
 	{
 		setStatus(403);
-		if (server.error_page.find("403") != server.error_page.end())
+		if (_client->server_config->error_page.find("403") != _client->server_config->error_page.end())
 		{
-			std::string errorPagePath = "." + server.error_page.at("403");
+			std::string errorPagePath = "." + _client->server_config->error_page.at("403");
 			struct stat fileStat;
 
 			if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode))
@@ -628,41 +619,41 @@ void Response::handleDeleteRequest(const Request &request, const Route &route, c
 	_bytesToSend = _body.size();
 }
 
-void Response::response_handler(HttpClient &client, int fd, std::vector<ServerConfig> &servers)
+void Response::response_handler()
 {
 	if (!_headersSent)
 	{
-		if (client.Srequest.error_status != 0)
+		if (_client->Srequest.error_status != 0)
 		{
-			setStatus(client.Srequest.error_status);
+			setStatus(_client->Srequest.error_status);
 			_body = "<html><body><h1>" + _status + "</h1 > < p>An error occurred processing your request.</p></body></html>";
 			_bytesToSend = _body.size();
 		}
 		else
 		{
-			ServerConfig &server = findMatchingServer(servers, client.Srequest);
-			const Route &route = findMatchingRoute(server, client.Srequest.path);
-
-			if (!route.redirect.empty())
+			_client->server_config = findMatchingServer(_client->server->getServerConfig(), _client->Srequest);
+			ServerConfig &server = *_client->server_config;
+			_client->route = findMatchingRoute(server, _client->Srequest.path);
+			if (!(_client->route->redirect.empty()))
 			{
 				setStatus(301);
-				_headers = "Location: " + route.redirect + "\r\n";
+				_headers = "Location: " + _client->route->redirect + "\r\n";
 			}
 			else
 			{
-				resolveFilePath(client.Srequest.path, route);
+				resolveFilePath();
 
-				if (client.Srequest.method == "GET")
+				if (_client->Srequest.method == "GET")
 				{
-					handleGetRequest(client.Srequest, route, server);
+					handleGetRequest();
 				}
-				else if (client.Srequest.method == "POST")
+				else if (_client->Srequest.method == "POST")
 				{
-					handlePostRequest(client.Srequest, route, server);
+					handlePostRequest();
 				}
-				else if (client.Srequest.method == "DELETE")
+				else if (_client->Srequest.method == "DELETE")
 				{
-					handleDeleteRequest(client.Srequest, route, server);
+					handleDeleteRequest();
 				}
 				else
 				{
@@ -677,11 +668,11 @@ void Response::response_handler(HttpClient &client, int fd, std::vector<ServerCo
 
 		std::string responseHeader = "HTTP/1.1 " + _status + "\r\n" + _headers;
 
-		ssize_t bytesSent = send(fd, responseHeader.c_str(), responseHeader.size(), 0);
+		ssize_t bytesSent = send(_client->get_socket_fd(), responseHeader.c_str(), responseHeader.size(), 0);
 
 		if (bytesSent < 0)
 		{
-			std::cerr << "Error sending response headers to client FD " << fd << std::endl;
+			std::cerr << "Error sending response headers to client FD " << _client->get_socket_fd() << std::endl;
 			return;
 		}
 		else
@@ -692,38 +683,37 @@ void Response::response_handler(HttpClient &client, int fd, std::vector<ServerCo
 		_bytesSent = 0;
 	}
 
-	bool completed = sendResponseChunk(fd, client);
+	bool completed = sendResponseChunk();
 
 	if (completed)
 	{
-		client.set_response_status(Complete);
+		_client->set_response_status(Complete);
 		std::cout << Logger::trace_http("TRACE", _client->client_ip, _client->client_port, 
 			_client->Srequest.method, _client->Srequest.path, 
 			_client->Srequest.version, _client->res._status, 
 			to_string(current_time_in_ms() - _client->time_start_));
-	
 	}
 }
 
-bool Response::sendResponseChunk(int fd, HttpClient &client)
+bool Response::sendResponseChunk()
 {
 	if (_fileStream.is_open())
 	{
-		_fileStream.read(_buffer, BUFFER_SIZE);
+		_fileStream.read(_buffer, MAX_SEND);
 		size_t bytesRead = _fileStream.gcount();
 
 		if (bytesRead > 0)
 		{
-			ssize_t bytesSent = send(fd, _buffer, bytesRead, 0);
+			ssize_t bytesSent = send(_client->get_socket_fd(), _buffer, bytesRead, 0);
 
 			if (bytesSent < 0)
 			{
-				std::cerr << "Error sending file chunk to client FD " << fd << std::endl;
+				std::cerr << "Error sending file chunk to client FD " << _client->get_socket_fd() << std::endl;
 				_fileStream.close();
 				return true;
 			}
 
-			client.time_client_ = time(NULL);
+			_client->time_client_ = time(NULL);
 
 			_bytesSent += bytesSent;
 
@@ -743,12 +733,12 @@ bool Response::sendResponseChunk(int fd, HttpClient &client)
 	}
 	else if (_bytesToSend > 0)
 	{
-		ssize_t bytesSent = send(fd, _body.c_str() + _bytesSent, _bytesToSend - _bytesSent, 0);
-		client.time_client_ = time(NULL);
+		ssize_t bytesSent = send(_client->get_socket_fd(), _body.c_str() + _bytesSent, _bytesToSend - _bytesSent, 0);
+		_client->time_client_ = time(NULL);
 
 		if (bytesSent < 0)
 		{
-			std::cerr << "Error sending response body to client FD " << fd << std::endl;
+			std::cerr << "Error sending response body to client FD " << _client->get_socket_fd() << std::endl;
 			return true;
 		}
 

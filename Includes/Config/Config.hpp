@@ -6,21 +6,6 @@
 
 
 
-void printTokens(const std::vector<std::string > &tokens, std::size_t i);
-
-//emerg: System is unusable (e.g., "cannot open config file").
-//alert: Immediate action needed (e.g., "disk full").
-//crit: Critical condition (e.g., "database crashed").
-//error: General error (e.g., "invalid directive").
-//warn: Warning (e.g., "deprecated feature used").
-
-enum LogLevel {
-	EMERG,
-	WARNING,
-	ERROR,
-	DEBUG
-};
-
 // Track the server 
 struct ServerFoundDirective {
 	bool has_port;

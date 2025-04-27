@@ -1,14 +1,15 @@
 #include "../../Includes/Http_Req_Res/Response.hpp"
+#include "../../Includes/http_client/http_client.hpp"
 #include <sys/stat.h>
 #include <fcntl.h>
 
-void Response::handleCGIRequest(Request& request, const Route& route) {
-    request.fileStream.close();
+void Response::handleCGIRequest() {
+    _client->Srequest.fileStream.close();
 
     // Convert headers to environment variables with "HTTP_" prefix
     std::vector<char*> envp;
-    for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
-         it != request.headers.end(); ++it) {
+    for (std::map<std::string, std::string>::const_iterator it = _client->Srequest.headers.begin();
+         it != _client->Srequest.headers.end(); ++it) {
         std::string headerName = it->first;
         // Convert header name to uppercase and replace '-' with '_'
         std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::toupper);
@@ -37,7 +38,7 @@ void Response::handleCGIRequest(Request& request, const Route& route) {
 
     if (pid == 0) { // Child process
         // Open the request body file
-        int file_fd = open(request.filename.c_str(), O_RDONLY);
+        int file_fd = open(_client->Srequest.filename.c_str(), O_RDONLY);
         if (file_fd < 0) {
             perror("open request body file failed");
             exit(1);
@@ -48,7 +49,7 @@ void Response::handleCGIRequest(Request& request, const Route& route) {
         close(pipeOut[0]);
 
         char* args[] = {
-            strdup(route.cgi_extension.at(_filePath.substr(_filePath.find_last_of("."))).c_str()),
+            strdup(_client->route->cgi_extension.at(_filePath.substr(_filePath.find_last_of("."))).c_str()),
             strdup(_filePath.c_str()),
             NULL
         };
@@ -59,9 +60,9 @@ void Response::handleCGIRequest(Request& request, const Route& route) {
     } else { // Parent process
         close(pipeOut[1]);
 
-        char buffer[BUFFER_SIZE];
+        char buffer[MAX_SEND];
         ssize_t bytesRead;
-        while ((bytesRead = read(pipeOut[0], buffer, BUFFER_SIZE)) > 0) {
+        while ((bytesRead = read(pipeOut[0], buffer, MAX_SEND)) > 0) {
             _body.append(buffer, bytesRead);
         }
         close(pipeOut[0]);
@@ -85,5 +86,6 @@ void Response::handleCGIRequest(Request& request, const Route& route) {
     for (std::vector<char*>::iterator it = envp.begin(); it != envp.end(); ++it) {
         if (*it) free(*it);
     }
-    unlink(request.filename.c_str());
+    unlink(_client->Srequest.filename.c_str());
+    _client->Srequest.filename = "";
 }

@@ -3,6 +3,7 @@
 
 #define MAX_EVENTS 25
 #define MAX_RECV 1024 * 1024 * 5
+#define MAX_SEND 8192
 #define TIMEOUT 10
 #define EPOLL_TIMEOUT 100
 
@@ -32,6 +33,18 @@
 #include <unistd.h>
 #include <vector>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
+#include <iostream>
+#include <ctime>
+#include <string>
+
+#include <string>
+#include <ctime>
+#include <sstream>
+
 
 namespace Color {
     const std::string RESET = "\033[0m";

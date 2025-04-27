@@ -14,7 +14,13 @@ HttpClient::HttpClient(int client_socket, std::string client_ip, uint16_t client
   time_start_ = current_time_in_ms();
   time_client_ = time(NULL);
   res._client = this;
+  Srequest._client = this;
 }
+
+
+size_t  HttpClient::get_client_time() { return time_client_;};
+
+std::string HttpClient::get_client_ip() { return client_ip;};
 
 int HttpClient::get_socket_fd() { return socket_fd_; }
 

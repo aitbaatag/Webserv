@@ -1,5 +1,7 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include "../../Includes/Http_Req_Res/Response.hpp"
+#include "../../Includes/server/server_socket.hpp"
+
 #include <ios>
 #include <iostream>
 HttpRequest::HttpRequest() {}
@@ -75,8 +77,7 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
   return false;
 }
 
-void HttpRequest::parseIncrementally(HttpClient &client,
-                                     std::vector<ServerConfig> &servers) {
+void HttpRequest::parseIncrementally(HttpClient &client) {
   while (true) {
     switch (client.SMrequest.state) {
     case STATE_REQUEST_LINE:
@@ -91,10 +92,8 @@ void HttpRequest::parseIncrementally(HttpClient &client,
       }
 
     case STATE_BODY: {
-      ServerConfig &server =
-          Response::findMatchingServer(servers, client.Srequest);
-      const Route &route =
-          Response::findMatchingRoute(server, client.Srequest.path);
+      ServerConfig &server = *Response::findMatchingServer(client.server->getServerConfig(), client.Srequest);
+      const Route &route =   *Response::findMatchingRoute(server, client.Srequest.path);
       for (int i = 0; i < route.accepted_methods.size(); i++) {
         if (client.Srequest.method == route.accepted_methods[i]) {
           break;

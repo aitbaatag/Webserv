@@ -19,8 +19,8 @@ std::string Logger::get_time_only()
 
 std::string Logger::info(const std::string &message)
 {
-    return Color::BLUE + Color::BOLD + "[INFO]" + Color::RESET + 
-           Color::CYAN + " [" + get_time_only() + "]" + Color::RESET + " " + 
+    return Color::BLUE + Color::BOLD + "[INFO] " + Color::RESET + 
+           Color::CYAN + " [" + get_timestamp() + "]" + Color::RESET + " " + 
            message + "\n";
 }
 

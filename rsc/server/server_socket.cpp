@@ -191,7 +191,7 @@ void ServerSocket::processEpollEvents(struct epoll_event *events, int ready_fd_c
 			try
 			{
 				clients_[events[i].data.fd]->append_to_request();
-				HttpRequest::parseIncrementally(*(clients_[events[i].data.fd]), serverConfig_);
+				HttpRequest::parseIncrementally(*(clients_[events[i].data.fd]));
 			}
 
 			catch (const std::exception &e)
@@ -207,7 +207,7 @@ void ServerSocket::processEpollEvents(struct epoll_event *events, int ready_fd_c
 		{
 			try
 			{
-				clients_[events[i].data.fd]->res.response_handler(*(clients_[events[i].data.fd]), events[i].data.fd, serverConfig_);
+				clients_[events[i].data.fd]->res.response_handler();
 				if (clients_[events[i].data.fd]->get_response_status() == Complete)
 				{
 					handleClientDisconnection(events[i].data.fd);
@@ -231,6 +231,7 @@ void ServerSocket::handleClientConnection()
 	{
 		clients_[client.client_socket] = new HttpClient(client.client_socket, client.client_ip, client.client_port);
 		clients_[client.client_socket]->client_ip = client.client_ip;
+		clients_[client.client_socket]->server = this;
 
 		struct epoll_event ev;
 		ev.events = EPOLLIN | EPOLLOUT;
@@ -290,3 +291,5 @@ void ServerSocket::handleClientTimeout()
 		}
 	}
 }
+
+

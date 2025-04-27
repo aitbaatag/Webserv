@@ -1,0 +1,9 @@
+# Ignore all files in upload directory
+rsc/www/upload/*
+
+# But don't ignore the file named "a"
+!rsc/www/upload/a
+
+# Ignore object files and binary
+*.o
+Webserv

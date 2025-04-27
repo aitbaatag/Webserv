@@ -55,10 +55,10 @@ void startServers(std::vector<ServerSocket*> &servers)
 		}
 	}
 
-	struct epoll_event *master_events = new epoll_event[servers.size() + 1];
+	struct epoll_event *master_events = new epoll_event[servers.size()];
 	while (running)
 	{
-		int nfds = epoll_wait(epfd_master, master_events, MAX_EVENTS, EPOLL_TIMEOUT);
+		int nfds = epoll_wait(epfd_master, master_events, servers.size(), EPOLL_TIMEOUT);
 		if (nfds < 0)
 		{
 			perror("epoll_wait (master)");

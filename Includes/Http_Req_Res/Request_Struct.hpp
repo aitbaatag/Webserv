@@ -2,6 +2,8 @@
 #define REQUEST_STRUCT_HPP
 #include "../libraries/Libraries.hpp"
 
+class HttpClient;
+
 struct Request
 {
 	std::string method;
@@ -32,6 +34,7 @@ struct Request
 	std::fstream fileStream;
 	size_t body_start_pos;
 	size_t body_write;
+  HttpClient *_client;
 
 	// Constructor to initialize all members
   Request() : 
@@ -59,22 +62,19 @@ struct Request
     , body_write(0)
   {
   }
-
   ~Request()
   {
     if (fileStream.is_open())
       fileStream.close();
-      
-    if (!filename.empty())
-    {
-      FILE *file = fopen(filename.c_str(), "r");
-      if (file != NULL)
+    
+      if (!filename.empty())
       {
-        fclose(file);
-        unlink(filename.c_str());
-      }
-    }
-  }
+        if (access(filename.c_str(), F_OK) == 0)
+        {
+          unlink(filename.c_str());
+        }
+	}
+}
 };
 
 

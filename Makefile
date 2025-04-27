@@ -1,56 +1,50 @@
-CXX = c++ -std=c++98
-
+# Compiler and flags
+CXX      = c++ -std=c++98
 CXXFLAGS = -I./Includes
 
-TARGET = Webserv
+# Colors
+GREEN    = \033[0;32m
+CYAN     = \033[0;36m
+RED      = \033[0;31m
+RESET    = \033[0m
 
-SRC = ./rsc/main.cpp \
-		./rsc/utils/utils.cpp \
-		./rsc/Config/Config.cpp \
-		./rsc/response_cgi/CGI.cpp \
-		./rsc/response_cgi/Response.cpp \
-		./rsc/server/server_socket.cpp \
-		./rsc/http_client/http_client.cpp \
-		./rsc/Request/StateMachine.cpp \
-		./rsc/Request/Request.cpp \
-		./rsc/Request/RequestUtils.cpp \
-		./rsc/Request/ParseHeader.cpp \
-		./rsc/Request/ParseBody.cpp \
-		./rsc/cookies/session.cpp \
-		./rsc/cookies/session_manager.cpp \
+# Project settings
+TARGET   = Webserv
+SRC      = ./rsc/main.cpp \
+           ./rsc/utils/utils.cpp \
+           ./rsc/Config/Config.cpp \
+           ./rsc/response_cgi/CGI.cpp \
+           ./rsc/response_cgi/Response.cpp \
+           ./rsc/server/server_socket.cpp \
+           ./rsc/http_client/http_client.cpp \
+           ./rsc/Request/StateMachine.cpp \
+           ./rsc/Request/Request.cpp \
+           ./rsc/Request/RequestUtils.cpp \
+           ./rsc/Request/ParseHeader.cpp \
+           ./rsc/Request/ParseBody.cpp \
+           ./rsc/cookies/session.cpp \
+           ./rsc/cookies/session_manager.cpp
+OBJ      = $(SRC:.cpp=.o)
 
-OBJ = $(SRC:.cpp=.o)
-
+# Rules
 all: $(TARGET)
+	@printf "\033[2K\r$(GREEN)🌐 Webserv ready! $(RESET)\n"
 
 $(TARGET): $(OBJ)
-	$(CXX) $(OBJ) -o $(TARGET)
+	@printf "\033[2K\r$(CYAN)🔗 Linking$(RESET)"
+	@$(CXX) $(OBJ) -o $(TARGET)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	@printf "\033[2K\r$(CYAN)⚙️ Compiling $(notdir $<)$(RESET)"
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJ)
-
-fclean:
-	rm -f $(OBJ) $(TARGET)
-
-
-# Add these variables at the top with other variables
-PROFILE_DURATION = 100
-PROFILE_DATA = app_gprof_data.txt
-CALL_GRAPH = app_call_graph.dot
-
-# Add this target after other targets
-profile: $(TARGET)
-	rm -rf app_* gmo* gpro*
-	@echo "Starting profiling session for $(PROFILE_DURATION) seconds..."
-	@(sleep $(PROFILE_DURATION) && kill -INT $$(pgrep $(TARGET))) & \
-	./$(TARGET)	webserv.conf; \
-	source ~/.venv/bin/activate && \
-	gprof $(TARGET) gmon.out >> $(PROFILE_DATA) && \
-	gprof2dot $(PROFILE_DATA) > $(CALL_GRAPH) && \
-	xdot $(CALL_GRAPH)
-
+	@printf "\033[2K\r$(RED)🧹 Cleaning objects$(RESET)"
+	@rm -f $(OBJ)
+fclean: clean
+	@printf "\033[2K\r$(RED)🗑️ Cleaning $(TARGET)! $(RESET)\n"
+	@rm -f $(TARGET)
 
 re: fclean all
+
+.PHONY: all clean fclean re
