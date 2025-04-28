@@ -6,15 +6,13 @@
 void Response::handleCGIRequest() {
     _client->Srequest.fileStream.close();
 
-    // Convert headers to environment variables with "HTTP_" prefix
     std::vector<char*> envp;
+
     for (std::map<std::string, std::string>::const_iterator it = _client->Srequest.headers.begin();
          it != _client->Srequest.headers.end(); ++it) {
         std::string headerName = it->first;
-        // Convert header name to uppercase and replace '-' with '_'
         std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::toupper);
         std::replace(headerName.begin(), headerName.end(), '-', '_');
-        // Create environment variable string
         std::string envVar = "HTTP_" + headerName + "=" + it->second;
         envp.push_back(strdup(envVar.c_str()));
     }
@@ -23,22 +21,32 @@ void Response::handleCGIRequest() {
     int pipeOut[2];
     if (pipe(pipeOut) == -1) {
         setStatus(500);
+
+        if (error_page("500") == 1) {
+            return;
+        }
         _body = "<html><body><h1>500 Internal Server Error</h1><p>Pipe creation failed.</p></body></html>";
+        _bytesToSend = _body.size();
         return;
     }
 
-    pid_t pid = fork();
-    if (pid == -1) {
-        setStatus(500);
-        _body = "<html><body><h1>500 Internal Server Error</h1><p>Fork failed.</p></body></html>";
+    _pid = fork();
+    if (_pid == -1) {
         close(pipeOut[0]);
         close(pipeOut[1]);
+        setStatus(500);
+
+        if (error_page("500") == 1) {
+            return;
+        }
+        _body = "<html><body><h1>500 Internal Server Error</h1><p>Fork failed.</p></body></html>";
+        _bytesToSend = _body.size();
         return;
     }
 
-    if (pid == 0) { // Child process
-        // Open the request body file
+    if (_pid == 0) {
         int file_fd = open(_client->Srequest.filename.c_str(), O_RDONLY);
+
         if (file_fd < 0) {
             perror("open request body file failed");
             exit(1);
@@ -57,32 +65,34 @@ void Response::handleCGIRequest() {
         execve(args[0], args, &envp[0]);
         perror("execve failed");
         exit(1);
-    } else { // Parent process
+    }
+    else {
         close(pipeOut[1]);
 
         char buffer[MAX_SEND];
         ssize_t bytesRead;
+
         while ((bytesRead = read(pipeOut[0], buffer, MAX_SEND)) > 0) {
             _body.append(buffer, bytesRead);
         }
         close(pipeOut[0]);
 
         int status;
-        waitpid(pid, &status, WNOHANG);
-        std::cerr << "dasdaddsa" << std::endl;
-
+        waitpid(_pid, &status, WNOHANG);
 
         if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             setStatus(200);
-        } else {
+        }
+        else {
             setStatus(500);
+            if (error_page("500") == 1) {
+                return;
+            }
             _body = "<html><body><h1>500 Internal Server Error</h1><p>CGI script failed.</p></body></html>";
         }
-
         _bytesToSend = _body.size();
     }
 
-    // Free allocated memory
     for (std::vector<char*>::iterator it = envp.begin(); it != envp.end(); ++it) {
         if (*it) free(*it);
     }

@@ -152,7 +152,7 @@
     <script>
         async function loadFiles() {
             try {
-                const response = await fetch('/list/');
+                const response = await fetch('/upload/');
                 const html = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
@@ -202,7 +202,7 @@
             if (!selectedFile) return;
             
             try {
-                const response = await fetch(`/list/${selectedFile.value}`, {
+                const response = await fetch(`/upload/${selectedFile.value}`, {
                     method: 'DELETE'
                 });
                 

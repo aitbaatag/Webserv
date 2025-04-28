@@ -12,7 +12,6 @@ std::string trim(const std::string &str) {
 }
 bool ValidMediaType(const std::string &media_type) {
 
-  printf("media_type: %s\n", media_type.c_str());
   if (media_type == "text/plain" ||
       media_type == "application/x-www-form-urlencoded" ||
       media_type == "multipart/form-data" || media_type == "application/json" ||

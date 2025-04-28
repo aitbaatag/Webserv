@@ -340,8 +340,6 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
     }
 
     case checkFile: {
-      std::cout << "Check File: Completed " << client.Srequest.body_write << "/"
-                << client.Srequest.body_length << " bytes" << std::endl;
       return true; // Fully processed
     }
     }

@@ -20,6 +20,7 @@ class Response
 
 	    size_t _bytesToSend;
 	    size_t _bytesSent;
+		pid_t _pid;
 	    bool _headersSent;
 	    char _buffer[MAX_SEND];
 
@@ -42,6 +43,7 @@ class Response
 	    void setStatus(int code);
 	    void setHeaders();
 	    void resolveFilePath();
+		int error_page(std::string error_code);
 
 	    static ServerConfig *findMatchingServer(std::vector<ServerConfig> &servers, Request &request);
 	    static Route *findMatchingRoute(ServerConfig &server, std::string &path);
