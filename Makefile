@@ -17,6 +17,7 @@ SRC      = ./rsc/main.cpp \
            ./rsc/response_cgi/Response.cpp \
            ./rsc/server/server_socket.cpp \
            ./rsc/http_client/http_client.cpp \
+           ./rsc/http_client/Request_Struct.cpp \
            ./rsc/Request/StateMachine.cpp \
            ./rsc/Request/Request.cpp \
            ./rsc/Request/RequestUtils.cpp \
@@ -46,5 +47,7 @@ fclean: clean
 	@rm -f $(TARGET)
 
 re: fclean all
+	@rm -f $(OBJ)
+
 
 .PHONY: all clean fclean re

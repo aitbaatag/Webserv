@@ -43,12 +43,33 @@ ServerConfigParser::ServerConfigParser()
 		insideServerBlock_(false),
 		insideRouteBlock_(false)
 {
+	epfdMaster = epoll_create1(0);
+	if (epfdMaster == -1)
+	{
+		perror("epoll_create1");
+		return;
+	}
 }
 
-ServerConfigParser::~ServerConfigParser() {
-	if (file_.is_open()) {
+ServerConfigParser::~ServerConfigParser()
+{
+	if (file_.is_open())
 		file_.close();
-   }
+
+	for (std::map<int, EpollEventContext*>::iterator it = FileDescriptorList.begin(); it != FileDescriptorList.end(); ++it)
+	{
+		if (it->second)
+		{
+			if (it->second->descriptorType == ClientSocketFd)
+			{
+				delete it->second->httpClient;
+				it->second->httpClient = NULL;
+			}
+			delete it->second;
+			it->second = NULL;
+		}
+	}
+	FileDescriptorList.clear();
 }
 
 void ServerConfigParser::parseServer(std::vector<std::string> &lineTokens, std::size_t &idx)
@@ -57,6 +78,8 @@ void ServerConfigParser::parseServer(std::vector<std::string> &lineTokens, std::
 	if (lineTokens.size() > 1 && lineTokens[idx + 1] != "{")
 		throw std::runtime_error(Logger::error("[Syntax] : 'server' block must start with '{' at line " + to_string(lineCounter_) + "."));
 	servers_.push_back(ServerConfig());
+	ServerConfig& current_server = servers_.back();
+	current_server.scp = this;
 }
 
 void ServerConfigParser::parseListen(std::vector<std::string > &lineTokens, std::size_t &idx)
@@ -622,6 +645,8 @@ void ServerConfigParser::validate_config()
 		// Check if port exists
 		if (!servers_[i].Tracker.has_port)
 			throw std::runtime_error(Logger::error("missing port for server number: " + to_string(i)));
+		if (!servers_[i].routes.size())
+			throw std::runtime_error(Logger::error("found 0 route for server number: " + to_string(i)));
 		int port = servers_[i].port;
 		// Loop through server names for each server
 		for (std::vector<std::string>::iterator it =

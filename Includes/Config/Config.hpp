@@ -3,8 +3,11 @@
 
 #include "../libraries/Libraries.hpp"
 #include "../cookies/session_manager.hpp"
+// #include "../utlis/utils.hpp"
 
 
+
+class EpollEventContext;
 
 // Track the server 
 struct ServerFoundDirective {
@@ -46,6 +49,7 @@ struct Route
 
 
 
+class ServerConfigParser;
 // Represents a server block
 struct ServerConfig
 {
@@ -58,9 +62,9 @@ struct ServerConfig
 	std::vector<Route> routes;
 	ServerFoundDirective Tracker;
 	SessionManager clientSession_;
+	ServerConfigParser *scp;
 	ServerConfig();
 };
-
 
 
 
@@ -76,6 +80,11 @@ class ServerConfigParser {
 		bool insideServerBlock_;
 		bool insideRouteBlock_;
 		std::vector<ServerConfig> servers_;
+
+		//
+		int epfdMaster;
+		std::map<int, EpollEventContext *> FileDescriptorList; 
+
 	public:
 		
 		// contructor & deconstructor & public func
@@ -113,8 +122,12 @@ class ServerConfigParser {
 
 		// Return Servers
 		std::vector<ServerConfig> &getServers() {return servers_;};
+		int getEpfdMaster() {return epfdMaster;};
+		std::map<int, EpollEventContext *> &getFileDescriptorList() {return FileDescriptorList;}; 
 	
 
 };
+
+
 
 #endif

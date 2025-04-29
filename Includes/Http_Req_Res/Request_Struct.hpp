@@ -34,47 +34,12 @@ struct Request
 	std::fstream fileStream;
 	size_t body_start_pos;
 	size_t body_write;
-  HttpClient *_client;
+  	HttpClient *_client;
 
 	// Constructor to initialize all members
-  Request() : 
-    method("")
-    , uri("")
-    , path("")
-    , version("")
-    , query("")
-    , fragment("")
-    , field_name("")
-    , field_body("")
-    , chunk_size_str("")
-    , chunk_bytes_read(0)
-    , chunk_size(0)
-    , media_type("")
-    , body_length(0)
-    , boundary("")
-    , charset("")
-    , Content_Type("")
-    , error_status(0)
-    , filename("")
-    , currentHeader("")
-    , currentData("")
-    , body_start_pos(0)
-    , body_write(0)
-  {
-  }
-  ~Request()
-  {
-    if (fileStream.is_open())
-      fileStream.close();
-    
-      if (!filename.empty())
-      {
-        if (access(filename.c_str(), F_OK) == 0)
-        {
-          unlink(filename.c_str());
-        }
-	}
-}
+  Request();
+  ~Request();
+  void reset();
 };
 
 

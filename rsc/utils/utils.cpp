@@ -88,3 +88,53 @@ unsigned long long current_time_in_ms()
     gettimeofday(&tv, NULL);
     return static_cast<unsigned long long>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
 }
+
+
+
+EpollEventContext::EpollEventContext() : httpClient(NULL), serverSocket(NULL), fileDescriptor(-1)
+{
+    
+}
+
+EpollEventContext* EpollEventContext::createServerData(int fd, ServerSocket *server)
+{
+    EpollEventContext *data = new EpollEventContext();
+    data->descriptorType = ServerSocketFd;
+    data->serverSocket = server;
+    data->fileDescriptor = fd;
+	return data;
+}
+
+EpollEventContext* EpollEventContext::createClientData(int fd, HttpClient *client)
+{
+    EpollEventContext *data = new EpollEventContext();
+    data->descriptorType = ClientSocketFd;
+    data->httpClient = client;
+    data->fileDescriptor = fd;
+    return data;
+}
+
+EpollEventContext* EpollEventContext::createFileData(int fd, HttpClient *client)
+{
+    EpollEventContext *data = new EpollEventContext();
+    data->descriptorType = ClientFileFd;
+    data->httpClient = client;
+    data->fileDescriptor = fd;
+    return data;
+}
+
+void printServerBanner() {
+    std::cout << "\033[2J\033[1;1H";
+    std::string PEACH_COLOR = "\033[38;2;206;145;120m";
+    std::cout << PEACH_COLOR << Color::BOLD << "\n\n" <<
+        "     ██╗    ██╗███████╗██████╗ ███████╗███████╗██████╗ ██╗   ██╗\n" <<
+        "     ██║    ██║██╔════╝██╔══██╗██╔════╝██╔════╝██╔══██╗██║   ██║\n" <<
+        "     ██║ █╗ ██║█████╗  ██████╔╝███████╗█████╗  ██████╔╝██║   ██║\n" <<
+        "     ██║███╗██║██╔══╝  ██╔══██╗╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝\n" <<
+        "     ╚███╔███╔╝███████╗██████╔╝███████║███████╗██║  ██║ ╚████╔╝ \n" <<
+        "      ╚══╝╚══╝ ╚══════╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  " << 
+        Color::RESET << std::endl;
+    std::cout << Color::GRAY << "                        HTTP Server Implementation" << Color::RESET << std::endl;
+    std::cout << PEACH_COLOR << "                 Made by: alamaoui, kait-baa & orhaddao" << Color::RESET << std::endl;
+    std::cout << std::endl;
+}

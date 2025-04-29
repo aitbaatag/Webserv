@@ -115,6 +115,22 @@ void Response::setHeaders()
 	_headers += "\r\n";
 }
 
+void Response::reset()
+{
+	_status.clear();
+	_headers.clear();
+	_body.clear();
+	_filePath.clear();
+	_contentType = "text/plain";
+	_bytesToSend = 0;
+	_bytesSent = 0;
+	_pid = 0;
+	_headersSent = false;
+	memset(_buffer, 0, sizeof(_buffer));
+	_client = NULL;
+	if (_fileStream.is_open())
+	_fileStream.close();
+}
 std::string cleanSlashes(const std::string &str)
 {
 	std::string result;
@@ -467,6 +483,9 @@ void Response::handlePostRequest() {
 		if (_client->route->cgi_extension.find(extension) != _client->route->cgi_extension.end()) {
 			handleCGIRequest();
 		}
+		else if (_client->Srequest.path == "/pages/login.html") {
+			handleLoginRequest();
+		}
 		else if (!_client->route->upload_dir.empty()) {
 			if (_client->Srequest.path == "/submit-upload") {
 				setStatus(201);
@@ -483,9 +502,6 @@ void Response::handlePostRequest() {
 				}
 				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
 			}
-		}
-		else if (_client->Srequest.path == "/pages/login.html") {
-			handleLoginRequest();
 		}
 		else {
 			setStatus(403);

@@ -157,8 +157,4 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
     }
   }
 }
-// void HttpRequest::printRequestLine(HttpClient &client) {
-//   for (auto const &[key, value] : client.Srequest.headers) {
-//     std::cout << "{" << key << ": " << value << "}\n";
-//   }
-// }
+

@@ -2,6 +2,9 @@
 # define UTILS_HPP
 
 #include "../libraries/Libraries.hpp"
+#include "../server/server_socket.hpp"
+
+
 
 class Logger
 {
@@ -27,4 +30,29 @@ std::string to_string(const T& value)
     return ss.str();
 }
 
+
+
+enum FileDescriptorType
+{
+	ServerSocketFd,
+	ClientSocketFd,
+	ClientFileFd
+};
+
+struct EpollEventContext
+{
+	FileDescriptorType	descriptorType;
+	HttpClient			*httpClient;
+	ServerSocket		*serverSocket;
+	int					fileDescriptor;
+
+	EpollEventContext();
+
+	static EpollEventContext* createServerData(int	fd, ServerSocket	*server);
+	static EpollEventContext* createClientData(int	fd, HttpClient		*client);
+	static EpollEventContext* createFileData(int	fd, HttpClient		*client);
+};
+
+
+void printServerBanner();
 #endif

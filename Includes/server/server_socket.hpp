@@ -21,30 +21,27 @@ struct ClientConnectionInfo
 class ServerSocket
 {
 	private:
-		int socket_fd_;	// File descriptor for the server socket
-		int epoll_fd_;	// File descriptor for epoll instance
-		int server_port_;	// Port number the server listens on
-		std::string server_host_;
-		struct epoll_event events[MAX_EVENTS];	// Array to store epoll events
-		struct sockaddr_in server_address_;	// Server address structure
-		std::vector<ServerConfig> serverConfig_;	// Server configuration data
-		std::map<int, HttpClient*> clients_;	// Map of connected clients
+		int							socket_fd_;	// File descriptor for the server socket
+		int							server_port_;	// Port number the server listens on
+		std::string					server_host_;
+		std::vector<ServerConfig>	serverConfig_;	// Server configuration data
 
-		// delete
-		// Response res;
+		//////////
+		int							epfdMaster;
+		ServerConfigParser			*scp;
 
 		void initialize_socket();
 		void bind_socket();
 		void listen_for_connections();
 	public:
 		ServerSocket();
+		ServerSocket(int epfdMaster) {this->epfdMaster = epfdMaster;};
 		~ServerSocket();
 
 		// brief Creates an epoll instance for event monitoring
-		void createEpollInstance();
 
 		// Returns the epoll instance file descriptor
-		int getEpollInstanceFd() const { return epoll_fd_;}
+		// int getEpollInstanceFd() const { return epoll_fd_;}
 
 		// Accepts a new client connection
 		ClientConnectionInfo accept_connection();
@@ -62,18 +59,18 @@ class ServerSocket
 		}
 
 		// Handles client disconnection && Connection && timeout 
-		void handleClientDisconnection(int client_fd);
 		void handleClientConnection();
-		void handleClientTimeout();
 
 		// Processes epoll events
-		void processEpollEvents(struct epoll_event *events, int ready_fd_count);
 
 		// Starts the server
 		void startServer();
 
 		// Sets up the server port
 		void setupServerPort();
+
+		void setServerConfigParser(ServerConfigParser *p) {this->scp = p;};
+		ServerConfigParser	*getServerConfigParser() {return scp;}
 };
 
 #endif

@@ -38,17 +38,6 @@ void HttpClient::append_to_request() {
   time_client_ = time(NULL);
 }
 
-void HttpClient::registerEpollEvents(int epoll_fd_) {
-  epoll_event ev;
-  ev.events = EPOLLIN | EPOLLOUT;
-  ev.data.fd = socket_fd_;
-
-  if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket_fd_, &ev) == -1) {
-    throw std::runtime_error("Failed to add FD to epoll: " +
-                             std::string(strerror(errno)));
-  }
-}
-
 void HttpClient::update_pos(int new_pos) { pos_ = new_pos; }
 
 int HttpClient::get_pos() const { return pos_; }
@@ -59,4 +48,190 @@ void HttpClient::set_request_status(Status status) { request_status_ = status; }
 
 void HttpClient::set_response_status(Status status) {
   response_status_ = status;
+}
+
+
+void HttpClient::reset()
+{
+  // httpClient RESET
+
+  pos_ = 0;
+  request_status_ = InProgress;
+  response_status_ = InProgress;
+  time_start_ = current_time_in_ms();
+  time_client_ = time(NULL);
+  memset(buffer, 0, sizeof(buffer));
+  bytes_received = 0;
+	response_buffer_.clear();
+  readTrack.clear();
+	writeTrack.clear();
+
+  SMrequest = StateMachine();
+
+  //// clean the Request 
+  Srequest.reset();
+  res.reset();
+  res._client = this;
+  Srequest._client = this;
+}
+
+
+
+void handleConnectionHeader(HttpClient *c, int epfdMaster)
+{
+	std::map<std::string, std::string>::iterator it = c->Srequest.headers.find("Connection");
+	if (it != c->Srequest.headers.end())
+	{
+		std::string val = it->second;
+		std::transform(val.begin(), val.end(), val.begin(), ::tolower);
+		if (val == "close")
+		{
+			handleClientDisconnection(c, epfdMaster);
+			c = NULL;
+		}
+		else
+		{
+			c->reset();
+			return;
+		}
+	}
+	else
+	{
+		c->reset();
+		c = NULL;
+	}
+}
+
+void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster)
+{
+	// Handle EPOLLIN: Read request data
+	if ((event->events &EPOLLIN) && c->get_request_status() == InProgress)
+	{
+		try
+		{
+			c->append_to_request();
+			HttpRequest::parseIncrementally(*c);
+		}
+
+		catch (const std::exception &e)
+		{
+			std::cerr << Logger::error("Error processing request: " + std::string(e.what()));
+			return;
+		}
+	}
+
+	// Handle EPOLLOUT: Send response data
+	if ((event->events &EPOLLOUT) && c->get_request_status() == Complete)
+	{
+		try
+		{
+			c->res.response_handler();
+			if (c->get_response_status() == Complete)
+			{
+				handleConnectionHeader(c, epfdMaster);
+			}
+		}
+
+		catch (const std::exception &e)
+		{
+			std::cerr << Logger::error("Error sending response: " + std::string(e.what()));
+			return;
+		}
+	}
+}
+
+
+void handleClientDisconnection(HttpClient *c, int epfdMaster)
+{
+	int fd = c->socket_fd_;
+
+	if (epoll_ctl(epfdMaster, EPOLL_CTL_DEL, fd, NULL) == -1)
+	{
+		Logger::error("Failed to remove client " + to_string(fd) + " from epoll: " + std::string(strerror(errno)));
+	}
+	std::map<int, EpollEventContext*> &FileDescriptorList = c->server->getServerConfigParser()->getFileDescriptorList();
+	EpollEventContext *ctx = FileDescriptorList[fd];
+	if (ctx)
+	{
+		if (ctx->httpClient)
+		{
+			delete ctx->httpClient;
+			ctx->httpClient = NULL;
+		}
+		delete ctx;
+		FileDescriptorList[fd] = NULL;
+	}
+	FileDescriptorList.erase(fd);
+}
+
+void cleanAllClientServer(std::map<int, EpollEventContext*> &FileDescriptorList)
+{
+	for (std::map<int, EpollEventContext*>::iterator it = FileDescriptorList.begin(); it != FileDescriptorList.end(); ++it)
+	{
+		if (it->second)
+		{
+			close(it->first);
+      
+      if (it->second->descriptorType == ServerSocketFd)
+      {
+          close(it->second->serverSocket->get_socket_fd());
+          delete it->second->serverSocket;
+          it->second->serverSocket = NULL;
+      }
+      else if (it->second->descriptorType == ClientSocketFd)
+      {
+          close(it->second->httpClient->get_socket_fd());
+          delete it->second->httpClient;
+          it->second->httpClient = NULL;
+      }      
+			delete it->second;
+      it->second = NULL;
+		}
+	}
+	FileDescriptorList.clear();
+}
+
+void handleClientTimeouts(std::map<int, EpollEventContext*> &FileDescriptorList, int epfdMaster)
+{
+	size_t now = time(NULL);
+	for (std::map<int, EpollEventContext*>::iterator it = FileDescriptorList.begin(); it != FileDescriptorList.end();)
+	{
+		EpollEventContext *ctx = it->second;
+		if (ctx && ctx->descriptorType == ClientSocketFd && ctx->httpClient)
+		{
+			size_t client_time = ctx->httpClient->get_client_time();
+			size_t elapsed = now - client_time;
+			if (elapsed > TIMEOUT)
+			{
+        int fd = it->first;
+				std::string client_ip = ctx->httpClient->client_ip;
+				uint16_t client_port = ctx->httpClient->client_port;
+				std::cout << Color::BOLD << "[TRACE] " << Color::RESET <<
+				Color::CYAN << "[" << Logger::get_timestamp() << "] " << Color::RESET <<
+				client_ip << ":" << client_port << " " <<
+				Color::YELLOW << "\"TIMEOUT after " << elapsed << "s\"" << Color::RESET << std::endl;
+				handleClientDisconnection(ctx->httpClient, epfdMaster);
+				it = FileDescriptorList.upper_bound(fd);
+				continue;
+			}
+		}
+		++it;
+	}
+}
+
+void addConfigServer(ServerConfig &serversConfig, std::vector<ServerSocket*> &servers, int epfdMaster)
+{
+	for (size_t i = 0; i < servers.size(); i++)
+	{
+		if (servers[i]->getServerPort() == serversConfig.port)
+		{
+			servers[i]->getServerConfig().push_back(serversConfig);
+			return ;
+      }
+   }
+	ServerSocket *newServer = new ServerSocket(epfdMaster);
+	newServer->setServerConfigParser(serversConfig.scp);
+	newServer->getServerConfig().push_back(serversConfig);
+	newServer->setupServerPort();
+	servers.push_back(newServer);
 }

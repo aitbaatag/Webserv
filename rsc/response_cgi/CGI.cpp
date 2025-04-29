@@ -4,7 +4,7 @@
 #include <fcntl.h>
 
 void Response::handleCGIRequest() {
-    _client->Srequest.fileStream.close();
+    // _client->Srequest.fileStream.close();
 
     std::vector<char*> envp;
 

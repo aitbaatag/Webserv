@@ -32,6 +32,11 @@ class HttpClient
 		size_t              time_client_;
 		unsigned long long  time_start_;
 
+		// track read open
+		std::set<int>		readTrack;
+		std::set<int>		writeTrack;
+
+
 	public:
 		// Request/Response handling objects
 		StateMachine        SMrequest;
@@ -40,6 +45,7 @@ class HttpClient
 		ServerSocket		*server;
 		Route               *route;
 		ServerConfig        *server_config;
+
 
 	  	// Getters
 	  	int                 get_socket_fd();
@@ -57,12 +63,26 @@ class HttpClient
 
 		// Operations
 		void                append_to_request();
-		void                registerEpollEvents(int epoll_fd_);
+		void				reset();
+
 
 		// Constructors
 	  	HttpClient(int client_socket, std::string client_ip, uint16_t client_port);
 	  	HttpClient() {};
+		~HttpClient()
+		{
+			if (socket_fd_ > 0)
+			{
+				close(socket_fd_);
+				socket_fd_ = -1;
+			}
+		}
 };
 
+void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster);
+void handleClientDisconnection(HttpClient *c, int epfdMaster);
+void cleanAllClientServer(std::map<int, EpollEventContext*> &FileDescriptorList);
+void handleClientTimeouts(std::map<int, EpollEventContext*> &FileDescriptorList, int epfdMaster);
+void addConfigServer(ServerConfig &serversConfig, std::vector<ServerSocket*> &servers, int epfdMaster);
 
 #endif

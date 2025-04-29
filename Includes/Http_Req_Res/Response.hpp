@@ -39,6 +39,7 @@ class Response
 	    void handleFileRequest();
 	    void handleDirectoryListing();
 	    void handleCGIRequest();
+		void reset();
 
 	    void setStatus(int code);
 	    void setHeaders();
