@@ -22,7 +22,7 @@ private:
   // parsing functions for body
   static bool parseChunkedBody(HttpClient &client, const Route &route);
   static bool parseTextPlainBody(HttpClient &client, const Route &route);
-
+  static bool directory_exists(const char *path);
   // parsing functions for request line
   static bool validMethod(HttpClient &client, const std::string &method);
   static bool isAllowedURICharacter(char ch);
@@ -34,7 +34,8 @@ private:
   static bool ParseContent_Type(HttpClient &client);
 
   // parsing functions for body
-  static BodyType determineBodyType(const std::map<std::string, std::string> &headers);
+  static BodyType
+  determineBodyType(const std::map<std::string, std::string> &headers);
 
 public:
   HttpRequest();

@@ -1,58 +1,108 @@
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Select Your Favorite Color</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Select Your Favorite Color (PHP)</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/style.css"/>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
 
-        .container{
-            --max-width: 1000px;
-            --padding: 1rem;
+    .wrapperAll {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
 
-            width: min(var(--max-width), 100% - (var(--padding) * 1.2));
-            margin-inline: auto;
-        }
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f0f0;
-        }
-        div {
-            font-size: 1.5rem;
-            font-weight: semibold;
-            color: #333;
-            text-align: center;
-        }
-        .button{
-            border: none;
-            padding: 1rem 3rem;
-            background-color: #333;
-            border-radius: 15px;
-            font-weight: semibold;
-            color: #f0f0f0;
-        }
-    </style>
+
+.wrapper {
+  width: 100%;
+  max-width: 600px;
+  padding: 3rem;
+  background: #111; /* black background */
+  color: white;      /* white text inside */
+  border-radius: 16px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+}
+    form label {
+      display: block;
+      margin: 1rem 0 0.5rem;
+      font-weight: 500;
+    }
+
+    select {
+      padding: 0.75rem 1rem;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      color: #555;
+    }
+
+    .button {
+      padding: 0.75rem 2rem;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      background: #007BFF;
+      color: white;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Select a Color to Change the Page Background</h2>
-        <form action="../cgi-bin/display_color.php" method="post" enctype="text/plain">
-            <label for="color">Choose a color:</label>
-            <select id="color" name="color">
-                <option value="red">Red</option>
-                <option value="blue">Blue</option>
-                <option value="green">Green</option>
-                <option value="yellow">Yellow</option>
-                <option value="purple">Purple</option>
-            </select>
-            <br><br>
-            <input class="button" type="submit" value="Submit">
-        </form>
+  <section class="wrapperAll container">
+    <div class="wrapper">
+      <h1>Choose Background Color</h1>
+      <p>Use PHP CGI to change the background</p>
+
+      <form action="../cgi-bin/display_color.php" method="post" enctype="text/plain">
+        <label for="color">Pick a color:</label>
+        <select id="color" name="color">
+          <option value="red">Red</option>
+          <option value="blue">Blue</option>
+          <option value="green">Green</option>
+          <option value="yellow">Yellow</option>
+          <option value="purple">Purple</option>
+        </select>
+        <input class="button" type="submit" value="Submit"/>
+      </form>
     </div>
+  </section>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+

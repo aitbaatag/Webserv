@@ -1,101 +1,107 @@
 #include "../../Includes/Http_Req_Res/Response.hpp"
 #include "../../Includes/http_client/http_client.hpp"
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 void Response::handleCGIRequest() {
-    // _client->Srequest.fileStream.close();
+  // _client->Srequest.fileStream.close();
 
-    std::vector<char*> envp;
+  std::vector<char *> envp;
 
-    for (std::map<std::string, std::string>::const_iterator it = _client->Srequest.headers.begin();
-         it != _client->Srequest.headers.end(); ++it) {
-        std::string headerName = it->first;
-        std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::toupper);
-        std::replace(headerName.begin(), headerName.end(), '-', '_');
-        std::string envVar = "HTTP_" + headerName + "=" + it->second;
-        envp.push_back(strdup(envVar.c_str()));
+  for (std::map<std::string, std::string>::const_iterator it =
+           _client->Srequest.headers.begin();
+       it != _client->Srequest.headers.end(); ++it) {
+    std::string headerName = it->first;
+    std::transform(headerName.begin(), headerName.end(), headerName.begin(),
+                   ::toupper);
+    std::replace(headerName.begin(), headerName.end(), '-', '_');
+    std::string envVar = "HTTP_" + headerName + "=" + it->second;
+    envp.push_back(strdup(envVar.c_str()));
+  }
+  envp.push_back(NULL);
+
+  int pipeOut[2];
+  if (pipe(pipeOut) == -1) {
+    setStatus(500);
+
+    if (error_page("500") == 1) {
+      return;
     }
-    envp.push_back(NULL);
+    _body = "<html><body><h1>500 Internal Server Error</h1><p>Pipe creation "
+            "failed.</p></body></html>";
+    _bytesToSend = _body.size();
+    return;
+  }
 
-    int pipeOut[2];
-    if (pipe(pipeOut) == -1) {
-        setStatus(500);
+  _pid = fork();
+  if (_pid == -1) {
+    close(pipeOut[0]);
+    close(pipeOut[1]);
+    setStatus(500);
 
-        if (error_page("500") == 1) {
-            return;
-        }
-        _body = "<html><body><h1>500 Internal Server Error</h1><p>Pipe creation failed.</p></body></html>";
-        _bytesToSend = _body.size();
+    if (error_page("500") == 1) {
+      return;
+    }
+    _body = "<html><body><h1>500 Internal Server Error</h1><p>Fork "
+            "failed.</p></body></html>";
+    _bytesToSend = _body.size();
+    return;
+  }
+
+  if (_pid == 0) {
+    int file_fd = open(_client->Srequest.filename.c_str(), O_RDONLY);
+
+    if (file_fd < 0) {
+      perror("open request body file failed");
+      exit(1);
+    }
+
+    dup2(file_fd, STDIN_FILENO);
+    dup2(pipeOut[1], STDOUT_FILENO);
+    close(pipeOut[0]);
+
+    char *args[] = {
+        strdup(_client->route->cgi_extension
+                   .at(_filePath.substr(_filePath.find_last_of(".")))
+                   .c_str()),
+        strdup(_filePath.c_str()), NULL};
+    perror(args[0]);
+    execve(args[0], args, &envp[0]);
+    perror("execve failed");
+    perror(args[0]);
+    exit(1);
+  } else {
+    close(pipeOut[1]);
+
+    char buffer[MAX_SEND];
+    ssize_t bytesRead;
+
+    while ((bytesRead = read(pipeOut[0], buffer, MAX_SEND)) > 0) {
+      _body.append(buffer, bytesRead);
+    }
+    close(pipeOut[0]);
+
+    int status;
+    waitpid(_pid, &status, WNOHANG);
+
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+      setStatus(200);
+    } else {
+      setStatus(500);
+      if (error_page("500") == 1) {
         return;
+      }
+      _body = "<html><body><h1>500 Internal Server Error</h1><p>CGI script "
+              "failed.</p></body></html>";
     }
+    _bytesToSend = _body.size();
+  }
 
-    _pid = fork();
-    if (_pid == -1) {
-        close(pipeOut[0]);
-        close(pipeOut[1]);
-        setStatus(500);
-
-        if (error_page("500") == 1) {
-            return;
-        }
-        _body = "<html><body><h1>500 Internal Server Error</h1><p>Fork failed.</p></body></html>";
-        _bytesToSend = _body.size();
-        return;
-    }
-
-    if (_pid == 0) {
-        int file_fd = open(_client->Srequest.filename.c_str(), O_RDONLY);
-
-        if (file_fd < 0) {
-            perror("open request body file failed");
-            exit(1);
-        }
-
-        dup2(file_fd, STDIN_FILENO);
-        dup2(pipeOut[1], STDOUT_FILENO);
-        close(pipeOut[0]);
-
-        char* args[] = {
-            strdup(_client->route->cgi_extension.at(_filePath.substr(_filePath.find_last_of("."))).c_str()),
-            strdup(_filePath.c_str()),
-            NULL
-        };
-        
-        execve(args[0], args, &envp[0]);
-        perror("execve failed");
-        exit(1);
-    }
-    else {
-        close(pipeOut[1]);
-
-        char buffer[MAX_SEND];
-        ssize_t bytesRead;
-
-        while ((bytesRead = read(pipeOut[0], buffer, MAX_SEND)) > 0) {
-            _body.append(buffer, bytesRead);
-        }
-        close(pipeOut[0]);
-
-        int status;
-        waitpid(_pid, &status, WNOHANG);
-
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-            setStatus(200);
-        }
-        else {
-            setStatus(500);
-            if (error_page("500") == 1) {
-                return;
-            }
-            _body = "<html><body><h1>500 Internal Server Error</h1><p>CGI script failed.</p></body></html>";
-        }
-        _bytesToSend = _body.size();
-    }
-
-    for (std::vector<char*>::iterator it = envp.begin(); it != envp.end(); ++it) {
-        if (*it) free(*it);
-    }
-    unlink(_client->Srequest.filename.c_str());
-    _client->Srequest.filename = "";
+  for (std::vector<char *>::iterator it = envp.begin(); it != envp.end();
+       ++it) {
+    if (*it)
+      free(*it);
+  }
+  unlink(_client->Srequest.filename.c_str());
+  _client->Srequest.filename = "";
 }

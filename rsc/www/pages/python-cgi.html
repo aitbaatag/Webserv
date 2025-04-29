@@ -1,74 +1,76 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Document</title>
-	<style>
-		@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Submit User Info</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/style.css"/>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
 
-		.container{
-			/*--max-width: 1215px;*/
-			--max-width: 1000px;
-			--padding: 1rem;
+    .wrapperAll {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
 
-			width: min(var(--max-width), 100% - (var(--padding) * 1.2));
-			margin-inline: auto;
-		}
-		body {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			height: 100vh;
-			font-family: 'Inter', sans-serif;
-			background-color: #f0f0f0;
-		}
-		div {
-			font-size: 2rem;
-			font-weight: semibold;
-			color: #333;
-			text-align: center;
-		}
-		/* confetti */
-		canvas {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			z-index: 9999;
-		}
+    .wrapper {
+      width: 100%;
+      max-width: 600px;
+      padding: 3rem;
+    }
 
-		.button{
-			border: none;
-			padding: 1rem 3rem;
-			background-color: #333;
-			border-radius: 15px;
-			font-weight: semibold;
-			color: #f0f0f0;
-		}
-	</style>
+    form label {
+      display: block;
+      margin: 1rem 0 0.5rem;
+      font-weight: 500;
+    }
+
+    form input[type="text"],
+    form input[type="number"] {
+      padding: 0.75rem 1rem;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
-	<div class="container">
-		<h2>Display the output of python CGI</h2>
-		<form action="../cgi-bin/user_info.py" method="post" enctype="text/plain">
-			<label for="name">Name:</label>
-			<input type="text" id="name" name="name" required>
-			<br><br>
-			<label for="age">Age:</label>
-			<input type="number" id="age" name="age" required>
-			<br><br>
-			<input class="button" type="submit" value="Submit">
-		</form>
-		
-	</div>
-</body>
-<script src="confetti.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
-<!--<script>
-	const jsConfetti = new JSConfetti()
+  <section class="wrapperAll container">
+    <div class="wrapper">
+      <h2 class="subtitle">Enter Your Information</h2>
+      <div class="line"></div>
+      <form action="../cgi-bin/user_info.py" method="post" enctype="text/plain">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required />
 
-	jsConfetti.addConfetti()
-</script>-->
+        <label for="age">Age:</label>
+        <input type="number" id="age" name="age" required />
+
+        <input class="button" type="submit" value="Submit" />
+      </form>
+    </div>
+  </section>
+
+  <canvas id="confetti"></canvas>
+</body>
 </html>

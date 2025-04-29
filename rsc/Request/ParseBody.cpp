@@ -1,11 +1,10 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include "../../Includes/Http_Req_Res/StateMachine.hpp"
+#include "../../Includes/utlis/utils.hpp"
 #include <cstdarg>
 #include <iostream>
 #include <iterator>
 #include <string>
-#include "../../Includes/utlis/utils.hpp"
-
 
 bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
   char *reqBuff = client.get_request_buffer() + client.get_pos();
@@ -19,8 +18,12 @@ bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
   if (FileName.empty()) {
     FileName = "filename_" + to_string(client.socket_fd_);
   }
+  // check if upload directory exists if not put file in troot
 
-  client.Srequest.filename = "." + route.upload_dir + "/" + FileName;
+  if (access(route.upload_dir.c_str(), F_OK) != 0) {
+    client.Srequest.filename = "./" + FileName;
+  } else
+    client.Srequest.filename = "." + route.upload_dir + "/" + FileName;
 
   size_t to_write = 0;
   size_t pos = client.get_pos();
@@ -261,11 +264,15 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
     FileName = "filename_" + to_string(client.socket_fd_);
   }
 
-  client.Srequest.filename = "." + route.upload_dir + "/" + FileName;
+  if (!directory_exists(route.upload_dir.c_str())) {
+    client.Srequest.filename = FileName;
+  } else
+    client.Srequest.filename = "." + route.upload_dir + "/" + FileName;
 
   char *dataBuff = client.get_request_buffer() + client.get_pos();
   size_t to_write = 0;
-
+  std::cout << "File name: " << client.Srequest.filename << std::endl;
+  std::cout << "Directory: " << route.upload_dir << std::endl;
   // check if content length header is present
   if (client.Srequest.body_length <= 0) {
     std::cerr << "Empty body not allowed" << std::endl;
