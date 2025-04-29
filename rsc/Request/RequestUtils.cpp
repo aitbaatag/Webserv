@@ -1,4 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
+#include "../../Includes/utlis/utils.hpp"
 bool HttpRequest::directory_exists(const char *path) {
   DIR *dir = opendir(path);
   if (dir) {
@@ -8,6 +9,26 @@ bool HttpRequest::directory_exists(const char *path) {
     return false; // Directory does not exist
   }
 }
+
+void HttpRequest::setFileName(const Route &route, HttpClient &client) {
+
+  std::string FileName;
+  const std::string path = "." + route.upload_dir;
+
+  std::map<std::string, std::string>::iterator it =
+      client.Srequest.headers.find("X-File-Name");
+  if (it != client.Srequest.headers.end()) {
+    FileName = it->second;
+  }
+  if (FileName.empty()) {
+    FileName = "filename_" + to_string(client.socket_fd_);
+  }
+  if (!directory_exists(path.c_str())) {
+    client.Srequest.filename = FileName;
+  } else
+    client.Srequest.filename = path + "/" + FileName;
+}
+
 BodyType HttpRequest::determineBodyType(
     const std::map<std::string, std::string> &headers) {
   if (headers.find("Transfer-Encoding") != headers.end() &&

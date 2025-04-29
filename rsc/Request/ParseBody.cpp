@@ -254,25 +254,11 @@ bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
 
 bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
   std::string FileName;
-  std::map<std::string, std::string>::iterator it =
-      client.Srequest.headers.find("X-File-Name");
-  if (it != client.Srequest.headers.end()) {
-    FileName = it->second;
-  }
 
-  if (FileName.empty()) {
-    FileName = "filename_" + to_string(client.socket_fd_);
-  }
-
-  if (!directory_exists(route.upload_dir.c_str())) {
-    client.Srequest.filename = FileName;
-  } else
-    client.Srequest.filename = "." + route.upload_dir + "/" + FileName;
-
+  setFileName(route, client);
   char *dataBuff = client.get_request_buffer() + client.get_pos();
   size_t to_write = 0;
-  std::cout << "File name: " << client.Srequest.filename << std::endl;
-  std::cout << "Directory: " << route.upload_dir << std::endl;
+
   // check if content length header is present
   if (client.Srequest.body_length <= 0) {
     std::cerr << "Empty body not allowed" << std::endl;

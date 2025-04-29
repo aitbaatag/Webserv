@@ -65,10 +65,8 @@ void Response::handleCGIRequest() {
                    .at(_filePath.substr(_filePath.find_last_of(".")))
                    .c_str()),
         strdup(_filePath.c_str()), NULL};
-    perror(args[0]);
     execve(args[0], args, &envp[0]);
     perror("execve failed");
-    perror(args[0]);
     exit(1);
   } else {
     close(pipeOut[1]);
