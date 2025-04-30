@@ -138,3 +138,10 @@ void printServerBanner() {
     std::cout << PEACH_COLOR << "                 Made by: alamaoui, kait-baa & orhaddao" << Color::RESET << std::endl;
     std::cout << std::endl;
 }
+
+
+void close_fd(int &fd)
+{
+	close(fd);
+	fd = -1;
+};

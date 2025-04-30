@@ -10,19 +10,20 @@ class HttpClient;
 class Response
 {
     private:
-		std::string _status;
-	    std::string _headers;
-	    std::string _body;
+		std::string		_status;
+	    std::string		_headers;
+	    std::string		_body;
 
-	    std::string _filePath;
-	    std::string _contentType;
-	    std::ifstream _fileStream;
+	    std::string		_filePath;
+	    std::string		_contentType;
+	    std::ifstream	_fileStream;
+		int				_file_path_fd;
 
-	    size_t _bytesToSend;
-	    size_t _bytesSent;
-		pid_t _pid;
-	    bool _headersSent;
-	    char _buffer[MAX_SEND];
+	    size_t			_bytesToSend;
+	    size_t			_bytesSent;
+		pid_t			_pid;
+	    bool			_headersSent;
+	    char			_buffer[MAX_SEND];
 
     public:
 		Response();

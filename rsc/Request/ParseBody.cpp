@@ -6,24 +6,11 @@
 #include <iterator>
 #include <string>
 
-bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
+bool HttpRequest::parseChunkedBody(HttpClient &client) {
   char *reqBuff = client.get_request_buffer() + client.get_pos();
-  std::string FileName;
-  std::map<std::string, std::string>::iterator it =
-      client.Srequest.headers.find("X-File-Name");
-  if (it != client.Srequest.headers.end()) {
-    FileName = it->second;
-  }
-
-  if (FileName.empty()) {
-    FileName = "filename_" + to_string(client.socket_fd_);
-  }
+  
   // check if upload directory exists if not put file in troot
-
-  if (access(route.upload_dir.c_str(), F_OK) != 0) {
-    client.Srequest.filename = "./" + FileName;
-  } else
-    client.Srequest.filename = "." + route.upload_dir + "/" + FileName;
+  client.Srequest.filename = ".tmp_file_" + to_string(client.socket_fd_);
 
   size_t to_write = 0;
   size_t pos = client.get_pos();
@@ -31,14 +18,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
   while (true) {
     switch (client.SMrequest.stateChunk) {
     case STATE_FILE_CREATE: {
-      if (access(client.Srequest.filename.c_str(), F_OK) == 0) {
-        std::cerr << "Error: File already exists: " << client.Srequest.filename
-                  << std::endl;
-        client.Srequest.error_status = 409; // Conflict
-        client.set_request_status(Failed);
-        return true;
-      }
-
       client.Srequest.fileStream.open(client.Srequest.filename.c_str(),
                                       std::ios::in | std::ios::out |
                                           std::ios::binary | std::ios::trunc);
@@ -252,10 +231,10 @@ bool HttpRequest::parseChunkedBody(HttpClient &client, const Route &route) {
   return true;
 }
 
-bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
+bool HttpRequest::parseTextPlainBody(HttpClient &client) {
   std::string FileName;
 
-  setFileName(route, client);
+  client.Srequest.filename = ".tmp_file_" + to_string(client.socket_fd_);
   char *dataBuff = client.get_request_buffer() + client.get_pos();
   size_t to_write = 0;
 
@@ -270,14 +249,6 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
   while (true) {
     switch (client.SMrequest.stateTextPlain) {
     case createFile: {
-      if (access(client.Srequest.filename.c_str(), F_OK) == 0) {
-        std::cerr << "Error: File already exists: " << client.Srequest.filename
-                  << std::endl;
-        client.Srequest.error_status = 409; // Conflict
-        client.set_request_status(Failed);
-        return true;
-      }
-
       client.Srequest.fileStream.open(client.Srequest.filename.c_str(),
                                       std::ios::in | std::ios::out |
                                           std::ios::binary | std::ios::trunc);
@@ -302,7 +273,6 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client, const Route &route) {
           to_write = client.bytes_received - pos;
         }
       }
-
       client.SMrequest.stateTextPlain = writeFile;
       continue;
     }

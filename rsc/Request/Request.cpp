@@ -92,12 +92,13 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
       }
 
     case STATE_BODY: {
-      ServerConfig &server = *Response::findMatchingServer(client.server->getServerConfig(), client.Srequest);
-      const Route &route =   *Response::findMatchingRoute(server, client.Srequest.path);
-      for (int i = 0; i < route.accepted_methods.size(); i++) {
-        if (client.Srequest.method == route.accepted_methods[i]) {
+      
+      client.server_config = Response::findMatchingServer(client.server->getServerConfig(), client.Srequest);
+      client.route =  Response::findMatchingRoute(*client.server_config, client.Srequest.path);
+      for (int i = 0; i < client.route->accepted_methods.size(); i++) {
+        if (client.Srequest.method == client.route->accepted_methods[i]) {
           break;
-        } else if (i == route.accepted_methods.size() - 1) {
+        } else if (i == client.route->accepted_methods.size() - 1) {
           client.Srequest.error_status = 405;
           client.set_request_status(Failed);
           return;
@@ -107,11 +108,11 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
       switch (client.SMrequest.bodyType) {
       case START_: {
         client.SMrequest.bodyType = determineBodyType(client.Srequest.headers);
-        if (client.Srequest.body_length > server.max_body_size) {
+        if (client.Srequest.body_length > client.server_config->max_body_size) {
           client.Srequest.error_status = 413; // Payload Too Large
           client.set_request_status(Failed);
           std::cerr << "Request body too large: " << client.Srequest.body_length
-                    << " bytes (max: " << server.max_body_size << " bytes)"
+                    << " bytes (max: " << client.server_config->max_body_size << " bytes)"
                     << std::endl;
           return;
         }
@@ -125,7 +126,7 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
       }
 
       case CHUNKED: {
-        if (parseChunkedBody(client, route)) {
+        if (parseChunkedBody(client)) {
           client.SMrequest.state = STATE_COMPLETE;
           continue;
         }
@@ -134,7 +135,7 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
       }
 
       case TEXT_PLAIN: {
-        if (parseTextPlainBody(client, route)) {
+        if (parseTextPlainBody(client)) {
           client.SMrequest.state = STATE_COMPLETE;
           continue;
         }

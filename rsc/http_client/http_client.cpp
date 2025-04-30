@@ -107,7 +107,8 @@ void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
   }
 
   // Handle EPOLLOUT: Send response data
-  if ((event->events & EPOLLOUT) && c->get_request_status() == Complete) {
+  if ((event->events & EPOLLOUT) && (c->get_request_status() == Complete ||  c->get_request_status() == Failed))
+  {
     try {
 
       c->res.response_handler();

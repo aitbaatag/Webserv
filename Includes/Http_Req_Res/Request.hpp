@@ -20,11 +20,10 @@ private:
   static bool parseHeaders(HttpClient &client);
 
   // parsing functions for body
-  static bool parseChunkedBody(HttpClient &client, const Route &route);
-  static bool parseTextPlainBody(HttpClient &client, const Route &route);
+  static bool parseChunkedBody(HttpClient &client);
+  static bool parseTextPlainBody(HttpClient &client);
   static bool directory_exists(const char *path);
 
-  static void setFileName(const Route &route, HttpClient &client);
   // parsing functions for request line
   static bool validMethod(HttpClient &client, const std::string &method);
   static bool isAllowedURICharacter(char ch);

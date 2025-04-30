@@ -2,9 +2,10 @@
 #include "../../Includes/http_client/http_client.hpp"
 #include "../../Includes/utlis/utils.hpp"
 #include "../../Includes/server/server_socket.hpp"
-
+#include <fcntl.h>
 
 Response::Response() {
+	_file_path_fd = -1;
 	_status = "";
 	_headers = "";
 	_body = "";
@@ -16,8 +17,8 @@ Response::Response() {
 }
 
 Response::~Response() {
-	if (_fileStream.is_open())
-		_fileStream.close();
+	if (_file_path_fd > 0)
+		close_fd(_file_path_fd);
 	_client = NULL;
 }
 
@@ -50,24 +51,35 @@ void Response::setStatus(int code) {
 	}
 }
 
-int Response::error_page(std::string error_code) {
-	if (_client->server_config->error_page.find(error_code) != _client->server_config->error_page.end()) {
+int Response::error_page(std::string error_code)
+{
+	if (!_client)
+		return 0;
+
+	if (!_client->server_config)
+		_client->server_config = &(_client->server->getServerConfig()[0]);
+
+	if (_client->server_config->error_page.find(error_code) != _client->server_config->error_page.end())
+	{
 		std::string errorPagePath = "." + _client->server_config->error_page.at(error_code);
 		struct stat fileStat;
-		if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
-			_fileStream.open(errorPagePath.c_str(), std::ios:: in | std::ios::binary);
-			if (_fileStream.is_open()) {
-				_fileStream.seekg(0, std::ios::end);
-				_bytesToSend = _fileStream.tellg();
-				_fileStream.seekg(0, std::ios::beg);
+		if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode))
+		{
+			int fd = open(errorPagePath.c_str(), O_RDONLY);
+			if (fd != -1)
+			{
+				if (_file_path_fd > 0)
+					close_fd(_file_path_fd);
+				_file_path_fd = fd;
+				_bytesToSend = fileStat.st_size;
 				_contentType = "text/html";
 				return 1;
 			}
 		}
 	}
+
 	return 0;
 }
-
 void Response::setHeaders()
 {
 	if (_body.find("html>") != std::string::npos) {
@@ -111,7 +123,6 @@ void Response::setHeaders()
 	_headers += "Date: " + std::string(buffer) + "\r\n";
 	_headers += "Server: WebServ/1.0\r\n";
 	_headers += "Content-Length: " + to_string(_bytesToSend) + "\r\n";
-	_headers += "Connection: close\r\n";
 	_headers += "\r\n";
 }
 
@@ -128,8 +139,9 @@ void Response::reset()
 	_headersSent = false;
 	memset(_buffer, 0, sizeof(_buffer));
 	_client = NULL;
-	if (_fileStream.is_open())
-	_fileStream.close();
+	if (_file_path_fd > 0)
+		close_fd(_file_path_fd);
+
 }
 std::string cleanSlashes(const std::string &str)
 {
@@ -267,15 +279,12 @@ void Response::handleFileRequest() {
 			}
 		}
 
-		_fileStream.open(_filePath.c_str(), std::ios::in | std::ios::binary);
-        if (_fileStream.is_open()) {
-            _fileStream.seekg(0, std::ios::end);
-            _bytesToSend = _fileStream.tellg();
-            _fileStream.seekg(0, std::ios::beg);
-            setStatus(200);
-        }
-		else
-		{
+		int fd = open(_filePath.c_str(), O_RDONLY);
+		if (fd != -1) {
+			_file_path_fd = fd;
+			_bytesToSend = fileStat.st_size;
+			setStatus(200);
+		} else {
 			setStatus(403);
 			if (error_page("403") == 1) {
 				return;
@@ -475,44 +484,94 @@ void Response::handleLoginRequest()
 	_bytesToSend = _body.size();
 }
 
-void Response::handlePostRequest() {
-	size_t dotPos = _filePath.find_last_of(".");
+void Response::handlePostRequest()
+{
+  size_t dotPos = _filePath.find_last_of(".");
 
-	if (dotPos != std::string::npos) {
-		std::string extension = _filePath.substr(dotPos);
-		if (_client->route->cgi_extension.find(extension) != _client->route->cgi_extension.end()) {
-			handleCGIRequest();
-		}
-		else if (_client->Srequest.path == "/pages/login.html") {
-			handleLoginRequest();
-		}
-		else if (!_client->route->upload_dir.empty()) {
-			if (_client->Srequest.path == "/submit-upload") {
-				setStatus(201);
-				_body = "<html><body> < h1>201 Created</h1 > < p>File uploaded successfully.</p></body></html>";
-				_client->Srequest.filename = "";
-			}
-			else {
-				unlink(_client->Srequest.filename.c_str());
-				_client->Srequest.fileStream.close();
-				_client->Srequest.filename = "";
-				setStatus(500);
-				if (error_page("500") == 1) {
-					return;
-				}
-				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
-			}
-		}
-		else {
+  if (dotPos != std::string::npos)
+  {
+    std::string extension = _filePath.substr(dotPos);
+    if (_client->route->cgi_extension.find(extension) != _client->route->cgi_extension.end())
+    {
+      handleCGIRequest();
+    }
+    else if (_client->Srequest.path == "/pages/login.html")
+    {
+      handleLoginRequest();
+    }
+	else if (_client->Srequest.path == "/submit-upload")
+	{
+		std::map<std::string, std::string>::iterator it = _client->Srequest.headers.find("X-File-Name");
+		std::string fileName;
+		if (it != _client->Srequest.headers.end())
+			fileName = it->second;
+		else
+			fileName = "uploaded_file";
+	
+		if (_client->route->upload_dir.empty())
+		{
 			setStatus(403);
-			if (error_page("403") == 1) {
+			_body = "<html><body> < h1>403 Forbidden</h1 > < p>Upload directory not configured.</p></body></html>";
+			_bytesToSend = _body.size();
+			return;
+		}
+	
+		// Check if upload directory exists, create if not
+		std::string uploadDirPath = "." + _client->route->upload_dir;
+		struct stat st;
+		if (stat(uploadDirPath.c_str(), &st) != 0)
+		{
+			// Directory does not exist, create it with 0755 permissions
+			if (mkdir(uploadDirPath.c_str(), 0755) != 0)
+			{
+				setStatus(500);
+				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to create upload directory.</p></body></html>";
+				_bytesToSend = _body.size();
 				return;
 			}
-			_body = "<html><body> < h1>403 Forbidden</h1><p></p></body></html>";
 		}
+	
+		std::string uploadPath = uploadDirPath + "/" + fileName;
+		if (access(uploadPath.c_str(), F_OK) == 0)
+		{
+			setStatus(409);
+			_body = "<html><body> < h1>409 Conflict</h1 > < p>File already exists.</p></body></html>";
+			_bytesToSend = _body.size();
+			return;
+		}
+	
+		if (rename(_client->Srequest.filename.c_str(), uploadPath.c_str()) != 0)
+		{
+			perror("rename failed");
+			setStatus(500);
+			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
+		}
+		else
+		{
+			setStatus(201);
+			_body = "<html><body> < h1>201 Created</h1 > < p>File uploaded successfully.</p></body></html>";
+		}
+	
+		_bytesToSend = _body.size();
 	}
-	_bytesToSend = _body.size();
+    else
+    {
+      unlink(_client->Srequest.filename.c_str());
+      std::cout << "DELETED 3: " << _client->Srequest.filename.c_str();
+      setStatus(403);
+      if (error_page("403") == 1)
+      {
+        return;
+      }
+
+      _body = "<html><body> < h1>403 Forbidden</h1><p></p></body></html>";
+    }
+  }
+
+  _bytesToSend = _body.size();
 }
+
+
 
 void Response::handleDeleteRequest() {
 	struct stat fileStat;
@@ -565,11 +624,6 @@ void Response::response_handler() {
 			}
 		}
 		else {
-			_client->server_config = findMatchingServer(_client->server->getServerConfig(), _client->Srequest);
-
-			ServerConfig &server = *_client->server_config;
-			_client->route = findMatchingRoute(server, _client->Srequest.path);
-
 			if (!(_client->route->redirect.empty())) {
 				setStatus(301);
 				_headers = "Location: " + _client->route->redirect + "\r\n";
@@ -618,49 +672,60 @@ void Response::response_handler() {
 	}
 }
 
-bool Response::sendResponseChunk() {
-	if (_fileStream.is_open()) {
-		_fileStream.read(_buffer, MAX_SEND);
-		size_t bytesRead = _fileStream.gcount();
-
-		if (bytesRead > 0) {
+bool Response::sendResponseChunk()
+{
+	if (_file_path_fd > 0)
+	{
+		ssize_t bytesRead = read(_file_path_fd, _buffer, MAX_SEND);
+		if (bytesRead > 0)
+		{
 			ssize_t bytesSent = send(_client->get_socket_fd(), _buffer, bytesRead, 0);
-
-			if (bytesSent < 0) {
+			if (bytesSent < 0)
+			{
 				std::cerr << "Error sending file chunk to client FD " << _client->get_socket_fd() << std::endl;
-				_fileStream.close();
+				close_fd(_file_path_fd);
 				return true;
 			}
+
 			_client->time_client_ = time(NULL);
 			_bytesSent += bytesSent;
 
-			if (_bytesSent >= _bytesToSend || _fileStream.eof()) {
-				_fileStream.close();
+			if (_bytesSent >= _bytesToSend || bytesRead < MAX_SEND)
+			{
+				close_fd(_file_path_fd);
 				return true;
 			}
+
 			return false;
 		}
-		else {
-			_fileStream.close();
+		else
+		{
+			close_fd(_file_path_fd);
 			return true;
 		}
 	}
-	else if (_bytesToSend > 0) {
+	else if (_bytesToSend > 0)
+	{
 		ssize_t bytesSent = send(_client->get_socket_fd(), _body.c_str() + _bytesSent, _bytesToSend - _bytesSent, 0);
 		_client->time_client_ = time(NULL);
 
-		if (bytesSent < 0) {
+		if (bytesSent < 0)
+		{
 			std::cerr << "Error sending response body to client FD " << _client->get_socket_fd() << std::endl;
 			return true;
 		}
+
 		_bytesSent += bytesSent;
 
-		if (_bytesSent >= _bytesToSend) {
+		if (_bytesSent >= _bytesToSend)
+		{
 			return true;
 		}
+
 		return false;
 	}
-	else {
+	else
+	{
 		return true;
 	}
 }

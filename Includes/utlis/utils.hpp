@@ -55,4 +55,6 @@ struct EpollEventContext
 
 
 void printServerBanner();
+
+void close_fd(int &fd);
 #endif
