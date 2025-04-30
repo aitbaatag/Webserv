@@ -16,7 +16,7 @@ struct Request
 	std::map<std::string, std::string > formData;
 	std::string field_name;
 	std::string field_body;
-  size_t body_length_req;
+
   
 	// chunked body
 	std::string chunk_size_str;
@@ -31,7 +31,7 @@ struct Request
 	std::string filename;
 	std::string currentHeader;
 	std::string currentData;
-	std::fstream fileStream;
+	int fd_file;
 	size_t body_start_pos;
 	size_t body_write;
   	HttpClient *_client;

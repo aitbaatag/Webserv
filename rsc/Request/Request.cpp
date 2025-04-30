@@ -1,9 +1,10 @@
 #include "../../Includes/Http_Req_Res/Request.hpp"
 #include "../../Includes/Http_Req_Res/Response.hpp"
 #include "../../Includes/server/server_socket.hpp"
-
+#include "../../Includes/utlis/utils.hpp"
 #include <ios>
 #include <iostream>
+
 HttpRequest::HttpRequest() {}
 bool HttpRequest::parseRequestLine(HttpClient &client) {
   char *reqBuff = client.get_request_buffer();
@@ -111,9 +112,6 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
         if (client.Srequest.body_length > client.server_config->max_body_size) {
           client.Srequest.error_status = 413; // Payload Too Large
           client.set_request_status(Failed);
-          std::cerr << "Request body too large: " << client.Srequest.body_length
-                    << " bytes (max: " << client.server_config->max_body_size << " bytes)"
-                    << std::endl;
           return;
         }
 
@@ -148,10 +146,11 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
     }
 
     case STATE_COMPLETE:
-      if (client.Srequest.fileStream.is_open()) {
-        client.Srequest.fileStream.flush();
-        client.Srequest.fileStream.seekg(0);
-      }
+      close_fd(client.Srequest.fd_file);
+      // if (client.Srequest.fileStream.is_open()) {
+      //   client.Srequest.fileStream.flush();
+      //   client.Srequest.fileStream.seekg(0);
+      // }
 
       client.set_request_status(Complete);
       return;

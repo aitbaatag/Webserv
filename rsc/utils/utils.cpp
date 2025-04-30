@@ -142,6 +142,9 @@ void printServerBanner() {
 
 void close_fd(int &fd)
 {
-	close(fd);
-	fd = -1;
+    if (fd > 0)
+    {
+	    close(fd);
+	    fd = -1;
+    }
 };

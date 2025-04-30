@@ -57,7 +57,6 @@ void HttpClient::reset() {
   response_status_ = InProgress;
   time_start_ = current_time_in_ms();
   time_client_ = time(NULL);
-  memset(buffer, 0, sizeof(buffer));
   bytes_received = 0;
   response_buffer_.clear();
   readTrack.clear();
@@ -72,7 +71,12 @@ void HttpClient::reset() {
   Srequest._client = this;
 }
 
-void handleConnectionHeader(HttpClient *c, int epfdMaster) {
+void handleConnectionHeader(HttpClient *c, int epfdMaster)
+{
+  if (c->get_request_status() == Failed) {
+    handleClientDisconnection(c, epfdMaster);
+    return ;
+  }
   std::map<std::string, std::string>::iterator it =
       c->Srequest.headers.find("Connection");
   if (it != c->Srequest.headers.end()) {
@@ -83,12 +87,13 @@ void handleConnectionHeader(HttpClient *c, int epfdMaster) {
       c = NULL;
     } else {
       c->reset();
-      return;
+      return ;
     }
   } else {
     c->reset();
-    c = NULL;
+    return ;
   }
+
 }
 
 void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
@@ -107,7 +112,7 @@ void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
   }
 
   // Handle EPOLLOUT: Send response data
-  if ((event->events & EPOLLOUT) && (c->get_request_status() == Complete ||  c->get_request_status() == Failed))
+  if ((event->events & EPOLLOUT) && (c->get_request_status() == Complete || c->get_request_status() == Failed))
   {
     try {
 

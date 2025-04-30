@@ -4,7 +4,8 @@
 #include <sys/stat.h>
 
 void Response::handleCGIRequest() {
-  // _client->Srequest.fileStream.close();
+
+  close(_client->Srequest.fd_file);
 
   std::vector<char *> envp;
 

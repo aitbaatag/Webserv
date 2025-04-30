@@ -1,5 +1,5 @@
 #include "../../Includes/Http_Req_Res/Request_Struct.hpp"
-
+#include "../../Includes/utlis/utils.hpp"
 
 Request::Request() : method(""), uri(""), path("")
                     , version("") , query(""), fragment(""), field_name("")
@@ -9,12 +9,16 @@ Request::Request() : method(""), uri(""), path("")
     , error_status(0), filename(""), currentHeader("")
     , currentData(""), body_start_pos(0), body_write(0)
   {
+    fd_file = -1;
   }
 
 Request::~Request()
 {
-    if (fileStream.is_open())
-      fileStream.close();
+    if (fd_file > 0)
+    { 
+      close(fd_file);
+      fd_file = -1;
+    }
     
       if (!filename.empty())
       {
@@ -27,8 +31,10 @@ Request::~Request()
 
 void Request::reset()
 {
-    if (fileStream.is_open())
-        fileStream.close();
+
+  close_fd(fd_file);
+    // if (fileStream.is_open())
+    //     fileStream.close();
 
     if (!filename.empty()) {
         if (access(filename.c_str(), F_OK) == 0) {
@@ -46,7 +52,6 @@ void Request::reset()
     formData.clear();
     field_name.clear();
     field_body.clear();
-    body_length_req = 0;
     chunk_size_str.clear();
     chunk_bytes_read = 0;
     chunk_size = 0;

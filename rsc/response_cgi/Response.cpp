@@ -17,8 +17,7 @@ Response::Response() {
 }
 
 Response::~Response() {
-	if (_file_path_fd > 0)
-		close_fd(_file_path_fd);
+	close_fd(_file_path_fd);
 	_client = NULL;
 }
 
@@ -68,8 +67,7 @@ int Response::error_page(std::string error_code)
 			int fd = open(errorPagePath.c_str(), O_RDONLY);
 			if (fd != -1)
 			{
-				if (_file_path_fd > 0)
-					close_fd(_file_path_fd);
+				close_fd(_file_path_fd);
 				_file_path_fd = fd;
 				_bytesToSend = fileStat.st_size;
 				_contentType = "text/html";
@@ -137,10 +135,8 @@ void Response::reset()
 	_bytesSent = 0;
 	_pid = 0;
 	_headersSent = false;
-	memset(_buffer, 0, sizeof(_buffer));
 	_client = NULL;
-	if (_file_path_fd > 0)
-		close_fd(_file_path_fd);
+	close_fd(_file_path_fd);
 
 }
 std::string cleanSlashes(const std::string &str)
@@ -420,20 +416,19 @@ void Response::handleLoginRequest()
 {
 	std::string action, username, note;
 	std::string line;
+	// while (std::getline(_client->Srequest.fileStream, line))
+	// {
+	// 	size_t colonPos = line.find(':');
+	// 	if (colonPos != std::string::npos)
+	// 	{
+	// 		std::string key = line.substr(0, colonPos);
+	// 		std::string value = line.substr(colonPos + 1);
 
-	while (std::getline(_client->Srequest.fileStream, line))
-	{
-		size_t colonPos = line.find(':');
-		if (colonPos != std::string::npos)
-		{
-			std::string key = line.substr(0, colonPos);
-			std::string value = line.substr(colonPos + 1);
-
-			if (key == "action") action = value;
-			else if (key == "username") username = value;
-			else if (key == "note") note = value;
-		}
-	}
+	// 		if (key == "action") action = value;
+	// 		else if (key == "username") username = value;
+	// 		else if (key == "note") note = value;
+	// 	}
+	// }
 
 	if (action == "login" && !username.empty())
 	{
@@ -614,7 +609,12 @@ void Response::handleDeleteRequest() {
 	_bytesToSend = _body.size();
 }
 
-void Response::response_handler() {
+void Response::response_handler()
+{
+	if (_client->get_request_status() == Failed)
+	{
+		_headers += "Connection: closed\r\n";
+	}
 	if (!_headersSent) {
 		if (_client->Srequest.error_status != 0) {
 			setStatus(_client->Srequest.error_status);
