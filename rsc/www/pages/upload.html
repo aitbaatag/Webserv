@@ -420,7 +420,7 @@
 			    if (this.checked) {
 			        fileInput.style.display = 'none';
 			        curlCommandBox.style.display = 'block';
-			        curlCommandBox.textContent = 'curl -X POST -H "Transfer-Encoding: chunked" -H "Content-Type: text/plain" --data-binary @file_path http://localhost:8080';
+			        curlCommandBox.textContent = 'curl -X POST -H "X-File-Name: test" -H "Transfer-Encoding: chunked" -H "Content-Type: text/plain" --upload-file "file_path" http://localhost:8081/submit-upload';
 			        uploadButton.disabled = true;
 			    } else {
 			        fileInput.style.display = 'block';
