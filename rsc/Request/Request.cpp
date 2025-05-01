@@ -93,9 +93,10 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
       }
 
     case STATE_BODY: {
-      
-      client.server_config = Response::findMatchingServer(client.server->getServerConfig(), client.Srequest);
-      client.route =  Response::findMatchingRoute(*client.server_config, client.Srequest.path);
+      client.server_config = Response::findMatchingServer(
+          client.server->getServerConfig(), client.Srequest);
+      client.route = Response::findMatchingRoute(*client.server_config,
+                                                 client.Srequest.path);
       for (int i = 0; i < client.route->accepted_methods.size(); i++) {
         if (client.Srequest.method == client.route->accepted_methods[i]) {
           break;
@@ -157,4 +158,3 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
     }
   }
 }
-

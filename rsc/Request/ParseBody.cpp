@@ -8,7 +8,7 @@
 
 bool HttpRequest::parseChunkedBody(HttpClient &client) {
   char *reqBuff = client.get_request_buffer() + client.get_pos();
-  
+
   // check if upload directory exists if not put file in troot
   client.Srequest.filename = ".tmp_file_" + to_string(client.socket_fd_);
 
@@ -18,7 +18,8 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
   while (true) {
     switch (client.SMrequest.stateChunk) {
     case STATE_FILE_CREATE: {
-      client.Srequest.fd_file = open(client.Srequest.filename.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666);
+      client.Srequest.fd_file = open(client.Srequest.filename.c_str(),
+                                     O_RDWR | O_CREAT | O_TRUNC, 0666);
       if (client.Srequest.fd_file < 0) {
         std::cerr << "Error opening file for chunked data" << std::endl;
         client.Srequest.error_status = 500;
@@ -28,7 +29,8 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
 
       // client.Srequest.fileStream.open(client.Srequest.filename.c_str(),
       //                                 std::ios::in | std::ios::out |
-      //                                     std::ios::binary | std::ios::trunc);
+      //                                     std::ios::binary |
+      //                                     std::ios::trunc);
       // if (!client.Srequest.fileStream.is_open()) {
       //   std::cerr << "Error opening file for chunked data" << std::endl;
       //   client.Srequest.error_status = 500;
@@ -53,8 +55,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
           try {
             client.Srequest.chunk_size =
                 std::strtoull(client.Srequest.chunk_size_str.c_str(), NULL, 16);
-            std::cout << "Chunk size: " << client.Srequest.chunk_size
-                      << std::endl;
             client.SMrequest.stateChunk = STATE_CHUNK_LF;
             pos++;
             break;
@@ -135,8 +135,8 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
         // client.Srequest.fileStream.write(&reqBuff[pos - client.get_pos()],
         //                                  to_write);
         // if (!client.Srequest.fileStream) {
-        //   std::cerr << "Error: Failed to write chunk data to file" << std::endl;
-        //   client.Srequest.error_status = 500;
+        //   std::cerr << "Error: Failed to write chunk data to file" <<
+        //   std::endl; client.Srequest.error_status = 500;
         //   client.set_request_status(Failed);
         //   client.Srequest.fileStream.close();
         //   return true;
@@ -258,7 +258,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
 
 bool HttpRequest::parseTextPlainBody(HttpClient &client) {
   std::string FileName;
-
   client.Srequest.filename = ".tmp_file_" + to_string(client.socket_fd_);
   char *dataBuff = client.get_request_buffer() + client.get_pos();
   size_t to_write = 0;
@@ -274,7 +273,8 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
   while (true) {
     switch (client.SMrequest.stateTextPlain) {
     case createFile: {
-      client.Srequest.fd_file = open(client.Srequest.filename.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666);
+      client.Srequest.fd_file = open(client.Srequest.filename.c_str(),
+                                     O_RDWR | O_CREAT | O_TRUNC, 0666);
       if (client.Srequest.fd_file < 0) {
         std::cerr << "Error opening file" << std::endl;
         client.Srequest.error_status = 500;
@@ -283,7 +283,8 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
       }
       // client.Srequest.fileStream.open(client.Srequest.filename.c_str(),
       //                                 std::ios::in | std::ios::out |
-      //                                     std::ios::binary | std::ios::trunc);
+      //                                     std::ios::binary |
+      //                                     std::ios::trunc);
       // if (!client.Srequest.fileStream.is_open()) {
       //   std::cerr << "Error opening file" << std::endl;
       //   client.Srequest.error_status = 500;
@@ -311,9 +312,9 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
 
     case writeFile: {
       if (to_write > 0) {
-        write(client.Srequest.fd_file, dataBuff + client.get_pos(),
-              to_write);
-        if (client.Srequest.fd_file < 0) {
+        size_t bytes_write = write(client.Srequest.fd_file, dataBuff, to_write);
+
+        if (client.Srequest.fd_file < 0 || bytes_write < 0) {
           std::cerr << "Failed to write to file: " << client.Srequest.filename
                     << std::endl;
           client.Srequest.error_status = 500;
@@ -323,7 +324,8 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
         }
         // client.Srequest.fileStream.write(dataBuff, to_write);
         // if (!client.Srequest.fileStream) {
-        //   std::cerr << "Failed to write to file: " << client.Srequest.filename
+        //   std::cerr << "Failed to write to file: " <<
+        //   client.Srequest.filename
         //             << std::endl;
         //   client.Srequest.error_status = 500;
         //   client.set_request_status(Failed);
