@@ -416,19 +416,6 @@ void Response::handleLoginRequest()
 {
 	std::string action, username, note;
 	std::string line;
-	// while (std::getline(_client->Srequest.fileStream, line))
-	// {
-	// 	size_t colonPos = line.find(':');
-	// 	if (colonPos != std::string::npos)
-	// 	{
-	// 		std::string key = line.substr(0, colonPos);
-	// 		std::string value = line.substr(colonPos + 1);
-
-	// 		if (key == "action") action = value;
-	// 		else if (key == "username") username = value;
-	// 		else if (key == "note") note = value;
-	// 	}
-	// }
 
 	if (action == "login" && !username.empty())
 	{

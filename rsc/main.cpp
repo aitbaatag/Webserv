@@ -20,6 +20,22 @@ void signal_handler(int signum)
 }
 
 
+void trackClientFileEvents(epoll_event* events, int ready_fds) {
+    for (int j = 0; j < ready_fds; ++j)
+    {
+        EpollEventContext *context = (EpollEventContext*) events[j].data.ptr;
+        if (context->descriptorType == ClientFileFd)
+        {
+            if (context->httpClient)
+            {
+                if (events[j].events & EPOLLIN)
+                    context->httpClient->getReadTrack().insert(context->fileDescriptor);
+                if (events[j].events & EPOLLOUT)
+                    context->httpClient->getWriteTrack().insert(context->fileDescriptor);
+            }
+        }
+    }
+}
 
 void startServers(std::vector<ServerSocket*> &servers, int epfdMaster)
 {
@@ -36,6 +52,7 @@ void startServers(std::vector<ServerSocket*> &servers, int epfdMaster)
 		int ready_fds = epoll_wait(epfdMaster, events, MAX_EVENTS, 100);
 		if (ready_fds > 0)
 		{
+			trackClientFileEvents(events, ready_fds);
 			for (int j = 0; j < ready_fds; ++j)
 			{
 				EpollEventContext *context = (EpollEventContext*) events[j].data.ptr;

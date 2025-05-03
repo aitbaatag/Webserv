@@ -148,11 +148,6 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
 
     case STATE_COMPLETE:
       close_fd(client.Srequest.fd_file);
-      // if (client.Srequest.fileStream.is_open()) {
-      //   client.Srequest.fileStream.flush();
-      //   client.Srequest.fileStream.seekg(0);
-      // }
-
       client.set_request_status(Complete);
       return;
     }

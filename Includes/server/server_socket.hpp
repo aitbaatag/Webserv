@@ -71,6 +71,7 @@ class ServerSocket
 
 		void setServerConfigParser(ServerConfigParser *p) {this->scp = p;};
 		ServerConfigParser	*getServerConfigParser() {return scp;}
+		int getEpfdMaster() {return epfdMaster;};
 };
 
 #endif

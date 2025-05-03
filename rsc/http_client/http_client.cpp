@@ -70,35 +70,34 @@ void HttpClient::reset() {
   res._client = this;
   Srequest._client = this;
 }
-
-void handleConnectionHeader(HttpClient *c, int epfdMaster)
+void handleConnectionHeader(HttpClient **c, int epfdMaster)
 {
-  if (c->get_request_status() == Failed) {
-    handleClientDisconnection(c, epfdMaster);
+  if ((*c)->get_request_status() == Failed) {
+    handleClientDisconnection(*c, epfdMaster);
+    *c = NULL;
     return ;
   }
   std::map<std::string, std::string>::iterator it =
-      c->Srequest.headers.find("Connection");
-  if (it != c->Srequest.headers.end()) {
+      (*c)->Srequest.headers.find("Connection");
+  if (it != (*c)->Srequest.headers.end()) {
     std::string val = it->second;
     std::transform(val.begin(), val.end(), val.begin(), ::tolower);
     if (val == "close") {
-      handleClientDisconnection(c, epfdMaster);
-      c = NULL;
+      handleClientDisconnection(*c, epfdMaster);
+      *c = NULL;
     } else {
-      c->reset();
+      (*c)->reset();
       return ;
     }
   } else {
-    c->reset();
+    (*c)->reset();
     return ;
   }
-
 }
 
 void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
   // Handle EPOLLIN: Read request data
-  if ((event->events & EPOLLIN) && c->get_request_status() == InProgress) {
+  if ((event->events & EPOLLIN) && c && c->get_request_status() == InProgress) {
     try {
       c->append_to_request();
       HttpRequest::parseIncrementally(*c);
@@ -112,13 +111,12 @@ void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
   }
 
   // Handle EPOLLOUT: Send response data
-  if ((event->events & EPOLLOUT) && (c->get_request_status() == Complete || c->get_request_status() == Failed))
+  if ((event->events & EPOLLOUT) && c && (c->get_request_status() == Complete || c->get_request_status() == Failed))
   {
     try {
-
       c->res.response_handler();
       if (c->get_response_status() == Complete) {
-        handleConnectionHeader(c, epfdMaster);
+        handleConnectionHeader(&c, epfdMaster);
       }
     }
 
@@ -127,6 +125,11 @@ void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
                                  std::string(e.what()));
       return;
     }
+  }
+  if (c)
+  {
+    c->getReadTrack().clear();
+    c->getWriteTrack().clear();
   }
 }
 
@@ -216,4 +219,36 @@ void addConfigServer(ServerConfig &serversConfig,
   newServer->getServerConfig().push_back(serversConfig);
   newServer->setupServerPort();
   servers.push_back(newServer);
+}
+
+void HttpClient::deleteFileEpoll(int fd)
+{
+	std::map<int, EpollEventContext*> &FileDescriptorList = server->getServerConfigParser()->getFileDescriptorList();
+
+	if (epoll_ctl(server->getEpfdMaster(), EPOLL_CTL_DEL, fd, NULL)<		0)
+	{
+		throw std::runtime_error("Failed to remove file from epoll");
+	}
+
+	std::map<int, EpollEventContext*>::iterator it = FileDescriptorList.find(fd);
+	if (it != FileDescriptorList.end())
+	{
+		delete it->second;
+		FileDescriptorList.erase(it);
+	}
+}
+
+void HttpClient::registerFileEpoll(int fd)
+{
+	std::map<int, EpollEventContext*> &FileDescriptorList = server->getServerConfigParser()->getFileDescriptorList();
+
+	struct epoll_event ev;
+	ev.events = EPOLLIN | EPOLLOUT;
+	ev.data.fd = fd;
+	ev.data.ptr = EpollEventContext::createFileData(fd, this);
+	FileDescriptorList[fd] = static_cast<EpollEventContext*> (ev.data.ptr);
+	if (epoll_ctl(server->getEpfdMaster(), EPOLL_CTL_ADD, fd, &ev) < 0)
+	{
+		throw std::runtime_error("Failed to add file to epoll");
+	}
 }

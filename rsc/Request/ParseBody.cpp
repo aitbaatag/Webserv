@@ -26,17 +26,7 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
         client.set_request_status(Failed);
         return true;
       }
-
-      // client.Srequest.fileStream.open(client.Srequest.filename.c_str(),
-      //                                 std::ios::in | std::ios::out |
-      //                                     std::ios::binary |
-      //                                     std::ios::trunc);
-      // if (!client.Srequest.fileStream.is_open()) {
-      //   std::cerr << "Error opening file for chunked data" << std::endl;
-      //   client.Srequest.error_status = 500;
-      //   client.set_request_status(Failed);
-      //   return true;
-      // }
+      client.registerFileEpoll(client.Srequest.fd_file);
 
       client.SMrequest.stateChunk = STATE_CHUNK_SIZE;
       continue;
@@ -273,25 +263,14 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
   while (true) {
     switch (client.SMrequest.stateTextPlain) {
     case createFile: {
-      client.Srequest.fd_file = open(client.Srequest.filename.c_str(),
-                                     O_RDWR | O_CREAT | O_TRUNC, 0666);
+      client.Srequest.fd_file = open(client.Srequest.filename.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666);
       if (client.Srequest.fd_file < 0) {
         std::cerr << "Error opening file" << std::endl;
         client.Srequest.error_status = 500;
         client.set_request_status(Failed);
         return true;
       }
-      // client.Srequest.fileStream.open(client.Srequest.filename.c_str(),
-      //                                 std::ios::in | std::ios::out |
-      //                                     std::ios::binary |
-      //                                     std::ios::trunc);
-      // if (!client.Srequest.fileStream.is_open()) {
-      //   std::cerr << "Error opening file" << std::endl;
-      //   client.Srequest.error_status = 500;
-      //   client.set_request_status(Failed);
-      //   return true;
-      // }
-
+      client.registerFileEpoll(client.Srequest.fd_file);
       client.SMrequest.stateTextPlain = ValidData;
       continue;
     }

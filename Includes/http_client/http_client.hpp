@@ -65,6 +65,8 @@ class HttpClient
 		void                append_to_request();
 		void				reset();
 
+		std::set<int>& getReadTrack() {return readTrack;};
+		std::set<int>& getWriteTrack() {return writeTrack;};
 
 		// Constructors
 	  	HttpClient(int client_socket, std::string client_ip, uint16_t client_port);
@@ -77,6 +79,10 @@ class HttpClient
 				socket_fd_ = -1;
 			}
 		}
+
+		void deleteFileEpoll(int fd);
+		void registerFileEpoll(int fd);
+		
 };
 
 void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster);

@@ -51,7 +51,6 @@ void Response::handleCGIRequest() {
 
   if (_pid == 0) {
     int file_fd = open(_client->Srequest.filename.c_str(), O_RDONLY);
-
     if (file_fd < 0) {
       perror("open request body file failed");
       exit(1);
