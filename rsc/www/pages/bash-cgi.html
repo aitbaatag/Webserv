@@ -1,9 +1,3 @@
-
-
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,16 +20,16 @@
       min-height: 100vh;
     }
 
+    .wrapper {
+      width: 100%;
+      max-width: 600px;
+      padding: 3rem;
+      background: #111; /* black background */
+      color: white;      /* white text inside */
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+    }
 
-.wrapper {
-  width: 100%;
-  max-width: 600px;
-  padding: 3rem;
-  background: #111; /* black background */
-  color: white;      /* white text inside */
-  border-radius: 16px;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
-}
     form label {
       display: block;
       margin: 1rem 0 0.5rem;
@@ -72,6 +66,16 @@
       border: none;
       cursor: pointer;
     }
+
+    #result {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 10px;
+      padding: 1rem;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -80,7 +84,7 @@
       <h1>Choose Background Color</h1>
       <p>Use BASH CGI to change the background</p>
 
-      <form action="../cgi-bin/display_color.sh" method="post" enctype="text/plain">
+      <form id="colorForm" action="../cgi-bin/display_color.sh" method="post" enctype="text/plain">
         <label for="color">Pick a color:</label>
         <select id="color" name="color">
           <option value="red">Red</option>
@@ -91,17 +95,51 @@
         </select>
         <input class="button" type="submit" value="Submit"/>
       </form>
+      <div id="result"></div>
     </div>
   </section>
+
+  <script>
+    document.getElementById('colorForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = `color=${encodeURIComponent(form.color.value)}`;
+
+      fetch('../cgi-bin/display_color.sh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: data
+      })
+      .then(response => response.text())
+      .then(html => {
+        // Parse the returned HTML to extract the wrapper content
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const wrapperContent = doc.querySelector('.wrapper').innerHTML;
+
+        const wrapper = document.querySelector('.wrapper');
+        wrapper.innerHTML = `
+          <h2 class="subtitle">Color Selected</h2>
+          <div class="line"></div>
+          <div id="result" style="display:block;">
+            ${wrapperContent}
+          </div>
+        `;
+      })
+      .catch(() => {
+        const wrapper = document.querySelector('.wrapper');
+        wrapper.innerHTML = `
+          <h2 class="subtitle">Error</h2>
+          <div class="line"></div>
+          <div id="result" style="display:block;">
+            Error: Could not fetch color info.
+          </div>
+        `;
+      });
+    });
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93a7585c7e4f4569',t:'MTc0NjM1NDg2MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-

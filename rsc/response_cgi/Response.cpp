@@ -2,7 +2,6 @@
 #include "../../Includes/http_client/http_client.hpp"
 #include "../../Includes/utlis/utils.hpp"
 #include "../../Includes/server/server_socket.hpp"
-#include <fcntl.h>
 
 Response::Response() {
 	_file_path_fd = -1;
@@ -22,7 +21,6 @@ Response::Response() {
 	// --- response handler state machine initialization ---
 	_handlerState = HSTATE_ERROR_CHECK;
 	_headerSent = 0;
-
 
 	// --- CGI state machine initialization ---
     _cgiState = CGI_STATE_INIT;
@@ -53,9 +51,6 @@ void Response::reset()
 		_cgi_envp_built = false;
 	}
 
-	
-
-
 	_status.clear();
 	_headers.clear();
 	_body.clear();
@@ -83,10 +78,7 @@ void Response::reset()
 	_cgi_envp.clear();
 	_cgi_envp_built = false;
 	_cgi_child_status = 0;
-	
-	
 }
-
 
 Response::~Response()
 {
@@ -101,13 +93,12 @@ Response::~Response()
 			free(_cgi_envp[i]);
 			_cgi_envp[i] = NULL;
 		}
-
 		_cgi_envp.clear();
 		_cgi_envp_built = false;
 	}
-	
 	_client = NULL;
 }
+
 void Response::setStatus(int code) {
     std::map<int, std::string > statusMessages;
 
@@ -159,6 +150,8 @@ int Response::error_page(std::string error_code)
 	if (!_client->server_config)
 		_client->server_config = &(_client->server->getServerConfig()[0]);
 
+	setStatus(atoi(error_code.c_str()));
+
 	if (_client->server_config->error_page.find(error_code) != _client->server_config->error_page.end())
 	{
 		std::string errorPagePath = "." + _client->server_config->error_page.at(error_code);
@@ -179,6 +172,7 @@ int Response::error_page(std::string error_code)
 
 	return 0;
 }
+
 void Response::setHeaders()
 {
 	if (_body.find("html>") != std::string::npos) {
@@ -259,7 +253,6 @@ void Response::handleDirectoryListing() {
     DIR *dir = opendir(_filePath.c_str());
 
     if (!dir) {
-        setStatus(403);
 		if (error_page("403") == 1) {
 			return;
 		}
@@ -359,7 +352,6 @@ void Response::handleFileRequest() {
 				return;
 			}
 			else {
-				setStatus(403);
 				if (error_page("403") == 1) {
 					return;
 				}
@@ -374,8 +366,8 @@ void Response::handleFileRequest() {
 			_file_path_fd = fd;
 			_bytesToSend = fileStat.st_size;
 			setStatus(200);
-		} else {
-			setStatus(403);
+		}
+		else {
 			if (error_page("403") == 1) {
 				return;
 			}
@@ -385,7 +377,6 @@ void Response::handleFileRequest() {
 	}
 	else
 	{
-		setStatus(404);
 		if (error_page("404") == 1) {
 			return;
 		}
@@ -465,9 +456,7 @@ bool Response::handleGetRequest()
 	if (dotPos != std::string::npos)
 	{
 		std::string extension = _filePath.substr(dotPos);
-		if ((_client->route->cgi_extension.find(extension)) != _client->route->cgi_extension.end())
-		{
-			
+		if ((_client->route->cgi_extension.find(extension)) != _client->route->cgi_extension.end()) {
 			return(handleCGIRequest());
 		}
 		else
@@ -481,8 +470,7 @@ bool Response::handleGetRequest()
 
 std::string parseCookies(const std::string &cookieHeader, const std::string &key)
 {
-	if (cookieHeader.empty())
-	{
+	if (cookieHeader.empty()) {
 		return "";
 	}
 
@@ -492,8 +480,7 @@ std::string parseCookies(const std::string &cookieHeader, const std::string &key
 	while (std::getline(stream, pair, ';'))
 	{
 		size_t start = pair.find_first_not_of(" ");
-		if (start != std::string::npos)
-		{
+		if (start != std::string::npos) {
 			pair = pair.substr(start);
 		}
 
@@ -503,8 +490,7 @@ std::string parseCookies(const std::string &cookieHeader, const std::string &key
 			std::string cookieKey = pair.substr(0, separator);
 			std::string cookieValue = pair.substr(separator + 1);
 
-			if (cookieKey == key)
-			{
+			if (cookieKey == key) {
 				return cookieValue;
 			}
 		}
@@ -530,7 +516,6 @@ bool fd_getline(int fd, std::string &line)
 
 void Response::handleLoginRequest()
 {
-	
 	std::string action, username, note;
 	std::string line;
 
@@ -542,7 +527,6 @@ void Response::handleLoginRequest()
 		size_t colonPos = line.find(':');
 		if (colonPos != std::string::npos)
 		{
-			
 			std::string key = line.substr(0, colonPos);
 			std::string value = line.substr(colonPos + 1);
 
@@ -571,9 +555,7 @@ void Response::handleLoginRequest()
 		}
 		else
 		{
-			setStatus(401);
-			if (error_page("401") == 1)
-			{
+			if (error_page("401") == 1) {
 				return;
 			}
 
@@ -583,8 +565,7 @@ void Response::handleLoginRequest()
 	else if (action == "logout")
 	{
 		std::string sessionId = parseCookies(_client->Srequest.headers["Cookie"], "sessionId");
-		if (!sessionId.empty())
-		{
+		if (!sessionId.empty()) {
 			_client->server_config->clientSession_.removeSession(sessionId);
 		}
 
@@ -593,9 +574,7 @@ void Response::handleLoginRequest()
 	}
 	else
 	{
-		setStatus(400);
-		if (error_page("400") == 1)
-		{
+		if (error_page("400") == 1) {
 			return;
 		}
 
@@ -607,24 +586,32 @@ void Response::handleLoginRequest()
 
 bool Response::handlePostRequest()
 {
-	
-
 	size_t dotPos = _filePath.find_last_of(".");
 
 	if (dotPos != std::string::npos)
 	{
 		std::string extension = _filePath.substr(dotPos);
-		if (_client->route->cgi_extension.find(extension) != _client->route->cgi_extension.end())
-		{
-
+		if (_client->route->cgi_extension.find(extension) != _client->route->cgi_extension.end()) {
 			return(handleCGIRequest());
 		}
-		else if (_client->Srequest.path == "/pages/login.html")
-		{
+		else if (_client->Srequest.path == "/pages/login.html") {
 			handleLoginRequest();
 		}
 		else if (_client->Srequest.path == "/submit-upload")
 		{
+			std::map<std::string, std::string>::iterator it_ = _client->Srequest.headers.find("Content-Type");
+			//check for unsupported media type
+			if (it_ == _client->Srequest.headers.end() || it_->second != "text/plain")
+			{
+				delete_file(_client->Srequest.filename);
+				if (error_page("415") == 1) {
+					return true;
+				}
+				_body = "<html><body> < h1>415 Unsupported Media Type</h1 > < p>Unsupported media type.</p></body></html>";
+				_bytesToSend = _body.size();
+				return true;
+			}
+
 			std::map<std::string, std::string>::iterator it = _client->Srequest.headers.find("X-File-Name");
 			std::string fileName;
 			if (it != _client->Srequest.headers.end())
@@ -634,7 +621,9 @@ bool Response::handlePostRequest()
 
 			if (_client->route->upload_dir.empty())
 			{
-				setStatus(403);
+				if (error_page("403") == 1) {
+					return true;
+				}
 				_body = "<html><body> < h1>403 Forbidden</h1 > < p>Upload directory not configured.</p></body></html>";
 				_bytesToSend = _body.size();
 				return true;
@@ -648,7 +637,9 @@ bool Response::handlePostRequest()
 			 	// Directory does not exist, create it with 0755 permissions
 				if (mkdir(uploadDirPath.c_str(), 0755) != 0)
 				{
-					setStatus(500);
+					if (error_page("500") == 1) {
+						return true;
+					}
 					_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to create upload directory.</p></body></html>";
 					_bytesToSend = _body.size();
 					return true;
@@ -658,7 +649,9 @@ bool Response::handlePostRequest()
 			std::string uploadPath = uploadDirPath + "/" + fileName;
 			if (access(uploadPath.c_str(), F_OK) == 0)
 			{
-				setStatus(409);
+				if (error_page("409") == 1) {
+					return true;
+				}
 				_body = "<html><body> < h1>409 Conflict</h1 > < p>File already exists.</p></body></html>";
 				_bytesToSend = _body.size();
 				return true;
@@ -667,7 +660,9 @@ bool Response::handlePostRequest()
 			if (rename(_client->Srequest.filename.c_str(), uploadPath.c_str()) != 0)
 			{
 				perror("rename failed");
-				setStatus(500);
+				if (error_page("500") == 1) {
+					return true;
+				}
 				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
 			}
 			else
@@ -681,9 +676,7 @@ bool Response::handlePostRequest()
 		else
 		{
 			delete_file(_client->Srequest.filename);
-			setStatus(403);
-			if (error_page("403") == 1)
-			{
+			if (error_page("403") == 1) {
 				return true;
 			}
 
@@ -703,9 +696,7 @@ void Response::handleDeleteRequest()
 
 	if (stat(_filePath.c_str(), &fileStat) != 0)
 	{
-		setStatus(404);
-		if (error_page("404") == 1)
-		{
+		if (error_page("404") == 1) {
 			return;
 		}
 
@@ -716,9 +707,7 @@ void Response::handleDeleteRequest()
 
 	if (S_ISDIR(fileStat.st_mode))
 	{
-		setStatus(403);
-		if (error_page("403") == 1)
-		{
+		if (error_page("403") == 1) {
 			return;
 		}
 
@@ -729,9 +718,7 @@ void Response::handleDeleteRequest()
 
 	if (unlink(_filePath.c_str()) != 0)
 	{
-		setStatus(500);
-		if (error_page("500") == 1)
-		{
+		if (error_page("500") == 1) {
 			return;
 		}
 
@@ -748,14 +735,12 @@ void Response::handleDeleteRequest()
 
 void Response::response_handler()
 {
-	
 	switch (_handlerState)
 	{
 		case HSTATE_ERROR_CHECK:
 
 			if (_client->Srequest.error_status != 0)
 			{
-				setStatus(_client->Srequest.error_status);
 				if (error_page(to_string(_client->Srequest.error_status)) == 0)
 				{
 					_body = "<html><body><h1>" + _status + "</h1 > < p>An error occurred processing your request.</p></body></html>";
@@ -764,8 +749,7 @@ void Response::response_handler()
 
 				_handlerState = HSTATE_SET_HEADERS;
 			}
-			else
-			{
+			else {
 				_handlerState = HSTATE_REDIRECT_CHECK;
 			}
 
@@ -778,8 +762,7 @@ void Response::response_handler()
 				_headers = "Location: " + _client->route->redirect + "\r\n";
 				_handlerState = HSTATE_SET_HEADERS;
 			}
-			else
-			{
+			else {
 				_handlerState = HSTATE_RESOLVE_PATH;
 			}
 
@@ -791,23 +774,18 @@ void Response::response_handler()
 			break;
 
 		case HSTATE_HANDLE_METHOD:
-			if (_client->Srequest.method == "GET")
-			{
+			if (_client->Srequest.method == "GET") {
 				if (!handleGetRequest())
 					return ;
 			}
-			else if (_client->Srequest.method == "POST")
-			{
+			else if (_client->Srequest.method == "POST") {
 				if(!handlePostRequest())
 					return ;
 			}
-			else if (_client->Srequest.method == "DELETE")
-			{
+			else if (_client->Srequest.method == "DELETE") {
 				handleDeleteRequest();
 			}
-			else
-			{
-				setStatus(501);
+			else {
 				if (error_page("501") == 0)
 				{
 					_body = "<html><body> < h1>501 Not Implemented</h1 > < p>The requested method is not supported.</p></body></html>";
@@ -838,8 +816,7 @@ void Response::response_handler()
 
 		case HSTATE_SEND_BODY:
 			{
-				if (sendResponseChunk(false))
-				{
+				if (sendResponseChunk(false)) {
 					_handlerState = HSTATE_COMPLETE;
 				}
 
@@ -861,7 +838,6 @@ void Response::response_handler()
 
 bool Response::sendResponseChunk(bool sendHeader)
 {
-	// Send header if requested
 	if (sendHeader)
 	{
 		if (_headerSent < _headerBuffer.size())
@@ -902,7 +878,6 @@ bool Response::sendResponseChunk(bool sendHeader)
 		return (_bytesSent >= _bytesToSend);
 	}
 
-
 	if (_file_path_fd > 0)
 	{
 		switch (_sendState)
@@ -911,8 +886,7 @@ bool Response::sendResponseChunk(bool sendHeader)
 			case SEND_READING:
 				_bufferLen = read(_file_path_fd, _buffer, MAX_SEND);
 				_bufferSent = 0;
-				if (_bufferLen > 0)
-				{
+				if (_bufferLen > 0) {
 					_sendState = SEND_SENDING;
 				}
 				else
@@ -937,8 +911,7 @@ bool Response::sendResponseChunk(bool sendHeader)
 					_client->time_client_ = time(NULL);
 				}
 
-				if (_bufferSent >= _bufferLen)
-				{
+				if (_bufferSent >= _bufferLen) {
 					_sendState = SEND_READING;
 				}
 
@@ -947,7 +920,5 @@ bool Response::sendResponseChunk(bool sendHeader)
 				return true;
 		}
 	}
-
-
 	return false;
 }

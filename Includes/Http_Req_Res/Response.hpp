@@ -14,7 +14,6 @@ enum SendState {
 
 
 enum HandlerState {
-    HSTATE_INIT,
     HSTATE_ERROR_CHECK,
     HSTATE_REDIRECT_CHECK,
     HSTATE_RESOLVE_PATH,

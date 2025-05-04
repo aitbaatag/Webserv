@@ -2,8 +2,6 @@
 #include "../../Includes/http_client/http_client.hpp"
 #include "../../Includes/utlis/utils.hpp"
 #include <fcntl.h>
-#include <sys/stat.h>
-
 
 bool Response::handleCGIRequest()
 {
@@ -37,8 +35,7 @@ bool Response::handleCGIRequest()
 				return true;
 			}
 
-		case CGI_STATE_ERROR:
-			{
+		case CGI_STATE_ERROR: {
 				return true;
 			}
 
@@ -47,7 +44,6 @@ bool Response::handleCGIRequest()
 	}
 	return false;
 }
-
 
 void Response::cgiInit()
 {
@@ -67,13 +63,15 @@ void Response::cgiInit()
 	_cgi_envp_built = true;
 	_cgiState = CGI_STATE_FORK;
 }
+
 void Response::cgiFork()
 {
 	close_fd(_client->Srequest.fd_file);
 	int pipeOut[2];
 	if (pipe(pipeOut) == -1)
 	{
-		setStatus(500);
+		if (error_page("500") == 1)
+			return;
 		_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Pipe creation failed.</p></body></html>";
 		_cgiState = CGI_STATE_ERROR;
 		return;
@@ -84,7 +82,8 @@ void Response::cgiFork()
 	{
 		close_fd(pipeOut[0]);
 		close_fd(pipeOut[1]);
-		setStatus(500);
+		if (error_page("500") == 1)
+			return;
 		_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Fork failed.</p></body></html>";
 		_cgiState = CGI_STATE_ERROR;
 		return;
@@ -119,7 +118,8 @@ void Response::cgiFork()
 		if (flags == -1 || fcntl(pipeOut[0], F_SETFL, flags | O_NONBLOCK) == -1)
 		{
 			close_fd(pipeOut[0]);
-			setStatus(500);
+			if (error_page("500") == 1)
+				return;
 			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to set pipe non-blocking.</p></body></html>";
 			_cgiState = CGI_STATE_ERROR;
 			return;
@@ -132,7 +132,8 @@ void Response::cgiFork()
 		{
 			close_fd(_cgi_pipe_fd);
 			_cgi_pipe_fd = -1;
-			setStatus(500);
+			if (error_page("500") == 1)
+				return;
 			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to open temp file.</p></body></html>";
 			_cgiState = CGI_STATE_ERROR;
 			return;
@@ -163,8 +164,7 @@ void Response::cgiReadOutput()
 void Response::cgiWaitChild()
 {
 	pid_t result = waitpid(_cgi_pid, &_cgi_child_status, WNOHANG);
-	if (result == 0)
-	{
+	if (result == 0) {
 		return;
 	}
 
@@ -173,13 +173,13 @@ void Response::cgiWaitChild()
 
 void Response::cgiProcessResult()
 {
-	if (WIFEXITED(_cgi_child_status) && WEXITSTATUS(_cgi_child_status) == 0)
-	{
+	if (WIFEXITED(_cgi_child_status) && WEXITSTATUS(_cgi_child_status) == 0) {
 		setStatus(200);
 	}
 	else
 	{
-		setStatus(500);
+		if (error_page("500") == 1)
+			return;
 		if (error_page("500") == 0)
 			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>CGI script failed.</p></body></html>";
 	}
