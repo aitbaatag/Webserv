@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,26 +12,22 @@
       height: 100%;
       margin: 0;
     }
-
     .wrapperAll {
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
     }
-
     .wrapper {
       width: 100%;
       max-width: 600px;
       padding: 3rem;
     }
-
     form label {
       display: block;
       margin: 1rem 0 0.5rem;
       font-weight: 500;
     }
-
     form input[type="text"],
     form input[type="number"] {
       padding: 0.75rem 1rem;
@@ -42,7 +37,15 @@
       width: 100%;
       margin-bottom: 1.5rem;
     }
-
+    #result {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      color: #333;
+      background: #f7f7f7;
+      border-radius: 10px;
+      padding: 1rem;
+      display: none;
+    }
     canvas {
       position: fixed;
       top: 0;
@@ -59,7 +62,7 @@
     <div class="wrapper">
       <h2 class="subtitle">Enter Your Information</h2>
       <div class="line"></div>
-      <form action="../cgi-bin/user_info.py" method="post" enctype="text/plain">
+      <form id="userForm" autocomplete="off">
         <label for="name">Name:</label>
         <input type="text" id="name" name="name" required />
 
@@ -68,9 +71,46 @@
 
         <input class="button" type="submit" value="Submit" />
       </form>
+      <div id="result"></div>
     </div>
   </section>
 
   <canvas id="confetti"></canvas>
+  <script>
+    document.getElementById('userForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = `name=${encodeURIComponent(form.name.value)}&age=${encodeURIComponent(form.age.value)}`;
+      fetch('/cgi-bin/user_info.py', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: data
+      })
+      .then(response => response.json())
+      .then(json => {
+        const wrapper = document.querySelector('.wrapper');
+        wrapper.innerHTML = `
+          <h2 class="subtitle">Welcome!</h2>
+          <div class="line"></div>
+          <div id="result" style="display:block;">
+            <strong>Hello, ${json.name}!</strong><br>
+            You are <strong>${json.age}</strong> years old.
+          </div>
+        `;
+      })
+      .catch(() => {
+        const wrapper = document.querySelector('.wrapper');
+        wrapper.innerHTML = `
+          <h2 class="subtitle">Error</h2>
+          <div class="line"></div>
+          <div id="result" style="display:block;">
+            Error: Could not fetch user info.
+          </div>
+        `;
+      });
+    });
+  </script>
 </body>
 </html>

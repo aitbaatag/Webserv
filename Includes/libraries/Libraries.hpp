@@ -4,7 +4,7 @@
 #define MAX_EVENTS 25
 #define MAX_RECV 1024 * 1024 * 5
 #define MAX_SEND 8192
-#define TIMEOUT 100
+#define TIMEOUT 20
 #define EPOLL_TIMEOUT 0
 
 #include <algorithm>

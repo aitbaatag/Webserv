@@ -26,7 +26,7 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
         client.set_request_status(Failed);
         return true;
       }
-      client.registerFileEpoll(client.Srequest.fd_file);
+      // client.registerFileEpoll(client.Srequest.fd_file);
 
       client.SMrequest.stateChunk = STATE_CHUNK_SIZE;
       continue;
@@ -122,16 +122,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
           close_fd(client.Srequest.fd_file);
           return true;
         }
-        // client.Srequest.fileStream.write(&reqBuff[pos - client.get_pos()],
-        //                                  to_write);
-        // if (!client.Srequest.fileStream) {
-        //   std::cerr << "Error: Failed to write chunk data to file" <<
-        //   std::endl; client.Srequest.error_status = 500;
-        //   client.set_request_status(Failed);
-        //   client.Srequest.fileStream.close();
-        //   return true;
-        // }
-
         client.Srequest.chunk_bytes_read += to_write;
         client.Srequest.body_write += to_write;
         pos += to_write;
@@ -175,7 +165,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
           client.set_request_status(Failed);
           // client.Srequest.fileStream.close();
           close_fd(client.Srequest.fd_file);
-          client.Srequest.fd_file = -1;
           return true;
         }
       } else if (c == '\n') {
@@ -189,7 +178,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
         client.set_request_status(Failed);
         // client.Srequest.fileStream.close();
         close_fd(client.Srequest.fd_file);
-        client.Srequest.fd_file = -1;
         return true;
       }
 
@@ -232,11 +220,7 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
       client.set_request_status(Failed);
       if (client.Srequest.fd_file >= 0) {
         close_fd(client.Srequest.fd_file);
-        client.Srequest.fd_file = -1;
       }
-      // if (client.Srequest.fileStream.is_open()) {
-      //   client.Srequest.fileStream.close();
-      // }
 
       return true;
     }
@@ -270,7 +254,6 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
         client.set_request_status(Failed);
         return true;
       }
-      client.registerFileEpoll(client.Srequest.fd_file);
       client.SMrequest.stateTextPlain = ValidData;
       continue;
     }
@@ -301,16 +284,6 @@ bool HttpRequest::parseTextPlainBody(HttpClient &client) {
           close_fd(client.Srequest.fd_file);
           return true;
         }
-        // client.Srequest.fileStream.write(dataBuff, to_write);
-        // if (!client.Srequest.fileStream) {
-        //   std::cerr << "Failed to write to file: " <<
-        //   client.Srequest.filename
-        //             << std::endl;
-        //   client.Srequest.error_status = 500;
-        //   client.set_request_status(Failed);
-        //   client.Srequest.fileStream.close();
-        //   return true;
-        // }
 
         client.Srequest.body_write += to_write;
         client.update_pos(0);

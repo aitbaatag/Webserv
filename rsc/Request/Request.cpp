@@ -147,7 +147,6 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
     }
 
     case STATE_COMPLETE:
-      close_fd(client.Srequest.fd_file);
       client.set_request_status(Complete);
       return;
     }

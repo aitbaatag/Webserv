@@ -6,7 +6,6 @@
 #include"../Http_Req_Res/Request_Struct.hpp"
 
 class ServerSocket;
-// Content-Type: text/html; charset=UTF-8; version=1.0
 enum Status
 {
 	InProgress, Complete, Failed, Disc
@@ -65,20 +64,13 @@ class HttpClient
 		void                append_to_request();
 		void				reset();
 
-		std::set<int>& getReadTrack() {return readTrack;};
-		std::set<int>& getWriteTrack() {return writeTrack;};
+		std::set<int>&		getReadTrack() {return readTrack;};
+		std::set<int>&		getWriteTrack() {return writeTrack;};
 
 		// Constructors
 	  	HttpClient(int client_socket, std::string client_ip, uint16_t client_port);
-	  	HttpClient() {};
-		~HttpClient()
-		{
-			if (socket_fd_ > 0)
-			{
-				close(socket_fd_);
-				socket_fd_ = -1;
-			}
-		}
+	  	HttpClient();
+		~HttpClient();
 
 		void deleteFileEpoll(int fd);
 		void registerFileEpoll(int fd);

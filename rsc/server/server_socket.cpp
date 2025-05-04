@@ -124,8 +124,7 @@ void ServerSocket::startServer()
 	{
 		if (socket_fd_ != -1)
 		{
-			close(socket_fd_);
-			socket_fd_ = -1;
+			close_fd(socket_fd_);
 		}
 		throw;
 	}

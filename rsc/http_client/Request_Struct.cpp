@@ -14,33 +14,15 @@ Request::Request() : method(""), uri(""), path("")
 
 Request::~Request()
 {
-    if (fd_file > 0)
-    { 
-      close(fd_file);
-      fd_file = -1;
-    }
-    
-      if (!filename.empty())
-      {
-        if (access(filename.c_str(), F_OK) == 0)
-        {
-          unlink(filename.c_str());
-        }
-	}
+  delete_file(filename);
+  close_fd(fd_file);
+  
 }
 
 void Request::reset()
 {
-
+  delete_file(filename);
   close_fd(fd_file);
-    // if (fileStream.is_open())
-    //     fileStream.close();
-
-    if (!filename.empty()) {
-        if (access(filename.c_str(), F_OK) == 0) {
-            unlink(filename.c_str());
-        }
-    }
 
     method.clear();
     uri.clear();

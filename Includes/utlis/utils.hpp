@@ -57,4 +57,7 @@ struct EpollEventContext
 void printServerBanner();
 
 void close_fd(int &fd);
+void delete_file(std::string &filename);
+
+
 #endif

@@ -13,41 +13,142 @@ Response::Response() {
 	_contentType = "text/plain";
 	_bytesToSend = 0;
 	_bytesSent = 0;
-	_headersSent = false;
+
+	// --- Send Chunk state machine initialization ---
+	_sendState = SEND_IDLE;
+	_bufferLen = 0;
+	_bufferSent = 0;
+
+	// --- response handler state machine initialization ---
+	_handlerState = HSTATE_ERROR_CHECK;
+	_headerSent = 0;
+
+
+	// --- CGI state machine initialization ---
+    _cgiState = CGI_STATE_INIT;
+    _cgi_pipe_fd = -1;
+    _cgi_tmp_fd = -1;
+    _cgi_pid = -1;
+    _cgi_envp.clear();
+    _cgi_envp_built = false;
+    _cgi_child_status = 0;
 }
 
-Response::~Response() {
+void Response::reset()
+{
+	delete_file(_cgi_tmp_filename);
 	close_fd(_file_path_fd);
+	close_fd(_cgi_pipe_fd);
+	close_fd(_cgi_tmp_fd);
+
+	if (_cgi_envp_built)
+	{
+		for (size_t i = 0; i < _cgi_envp.size(); ++i)
+		{
+			free(_cgi_envp[i]);
+			_cgi_envp[i] = NULL;
+		}
+
+		_cgi_envp.clear();
+		_cgi_envp_built = false;
+	}
+
+	
+
+
+	_status.clear();
+	_headers.clear();
+	_body.clear();
+	_filePath.clear();
+	_contentType = "text/plain";
+	_bytesToSend = 0;
+	_bytesSent = 0;
+	_client = NULL;
+	close_fd(_file_path_fd);
+
+	// --- Send Chunk state machine initialization ---
+	_sendState = SEND_IDLE;
+	_bufferLen = 0;
+	_bufferSent = 0;
+
+	// --- response handler state machine initialization ---
+	_handlerState = HSTATE_ERROR_CHECK;
+	_headerSent = 0;
+
+	// --- CGI state machine initialization ---
+	_cgiState = CGI_STATE_INIT;
+	_cgi_pipe_fd = -1;
+	_cgi_tmp_fd = -1;
+	_cgi_pid = -1;
+	_cgi_envp.clear();
+	_cgi_envp_built = false;
+	_cgi_child_status = 0;
+	
+	
+}
+
+
+Response::~Response()
+{
+	delete_file(_cgi_tmp_filename);
+	close_fd(_file_path_fd);
+	close_fd(_cgi_pipe_fd);
+	close_fd(_cgi_tmp_fd);
+	if (_cgi_envp_built)
+	{
+		for (size_t i = 0; i < _cgi_envp.size(); ++i)
+		{
+			free(_cgi_envp[i]);
+			_cgi_envp[i] = NULL;
+		}
+
+		_cgi_envp.clear();
+		_cgi_envp_built = false;
+	}
+	
 	_client = NULL;
 }
-
 void Response::setStatus(int code) {
-	std::map<int, std::string > statusMessages;
+    std::map<int, std::string > statusMessages;
 
-	statusMessages[200] = "200 OK";
-	statusMessages[201] = "201 Created";
-	statusMessages[204] = "204 No Content";
-	statusMessages[301] = "301 Moved Permanently";
-	statusMessages[302] = "302 Found";
-	statusMessages[400] = "400 Bad Request";
-	statusMessages[401] = "401 Unauthorized";
-	statusMessages[403] = "403 Forbidden";
-	statusMessages[404] = "404 Not Found";
-	statusMessages[405] = "405 Method Not Allowed";
-	statusMessages[408] = "408 Request Timeout";
-	statusMessages[409] = "409 Conflict";
-	statusMessages[413] = "413 Payload Too Large";
-	statusMessages[415] = "415 Unsupported Media Type";
-	statusMessages[500] = "500 Internal Server Error";
-	statusMessages[501] = "501 Not Implemented";
-	statusMessages[505] = "505 HTTP Version Not Supported";
+    statusMessages[200] = "200 OK";
+    statusMessages[201] = "201 Created";
+    statusMessages[202] = "202 Accepted";
+    statusMessages[204] = "204 No Content";
+    statusMessages[206] = "206 Partial Content";
+    statusMessages[301] = "301 Moved Permanently";
+    statusMessages[302] = "302 Found";
+    statusMessages[303] = "303 See Other";
+    statusMessages[307] = "307 Temporary Redirect";
+    statusMessages[308] = "308 Permanent Redirect";
+    statusMessages[400] = "400 Bad Request";
+    statusMessages[401] = "401 Unauthorized";
+    statusMessages[403] = "403 Forbidden";
+    statusMessages[404] = "404 Not Found";
+    statusMessages[405] = "405 Method Not Allowed";
+    statusMessages[408] = "408 Request Timeout";
+    statusMessages[409] = "409 Conflict";
+    statusMessages[411] = "411 Length Required";
+    statusMessages[413] = "413 Payload Too Large";
+    statusMessages[414] = "414 URI Too Long";
+    statusMessages[415] = "415 Unsupported Media Type";
+    statusMessages[416] = "416 Range Not Satisfiable";
+    statusMessages[417] = "417 Expectation Failed";
+    statusMessages[422] = "422 Unprocessable Entity";
+    statusMessages[429] = "429 Too Many Requests";
+    statusMessages[431] = "431 Request Header Fields Too Large";
+    statusMessages[500] = "500 Internal Server Error";
+    statusMessages[501] = "501 Not Implemented";
+    statusMessages[502] = "502 Bad Gateway";
+    statusMessages[503] = "503 Service Unavailable";
+    statusMessages[505] = "505 HTTP Version Not Supported";
 
-	if (statusMessages.find(code) != statusMessages.end()) {
-		_status = statusMessages[code];
-	}
-	else {
-		_status = "500 Internal Server Error";
-	}
+    if (statusMessages.find(code) != statusMessages.end()) {
+        _status = statusMessages[code];
+    }
+    else {
+        _status = statusMessages[500];
+    }
 }
 
 int Response::error_page(std::string error_code)
@@ -100,9 +201,14 @@ void Response::setHeaders()
 		mimeTypes[".mp4"] = "video/mp4";
 		mimeTypes[".webm"] = "video/webm";
 		mimeTypes[".mp3"] = "audio/mpeg";
+		mimeTypes[".wav"] = "audio/wav";
+		mimeTypes[".ogg"] = "audio/ogg";
 		mimeTypes[".pdf"] = "application/pdf";
 		mimeTypes[".zip"] = "application/zip";
+		mimeTypes[".tar"] = "application/x-tar";
+		mimeTypes[".gz"] = "application/gzip";
 		mimeTypes[".txt"] = "text/plain";
+		mimeTypes[".xml"] = "application/xml";
 		size_t dotPos = _filePath.find_last_of(".");
 
 		if (dotPos != std::string::npos) {
@@ -121,24 +227,12 @@ void Response::setHeaders()
 	_headers += "Date: " + std::string(buffer) + "\r\n";
 	_headers += "Server: WebServ/1.0\r\n";
 	_headers += "Content-Length: " + to_string(_bytesToSend) + "\r\n";
+	if (_client->get_request_status() == Failed)
+		_headers += "Connection: closed\r\n";
 	_headers += "\r\n";
 }
 
-void Response::reset()
-{
-	_status.clear();
-	_headers.clear();
-	_body.clear();
-	_filePath.clear();
-	_contentType = "text/plain";
-	_bytesToSend = 0;
-	_bytesSent = 0;
-	_pid = 0;
-	_headersSent = false;
-	_client = NULL;
-	close_fd(_file_path_fd);
 
-}
 std::string cleanSlashes(const std::string &str)
 {
 	std::string result;
@@ -364,18 +458,25 @@ void Response::resolveFilePath() {
 	}
 }
 
-void Response::handleGetRequest() {
+bool Response::handleGetRequest()
+{
 	size_t dotPos = _filePath.find_last_of(".");
 
-	if (dotPos != std::string::npos) {
+	if (dotPos != std::string::npos)
+	{
 		std::string extension = _filePath.substr(dotPos);
-		if ((_client->route->cgi_extension.find(extension)) != _client->route->cgi_extension.end()) {
-			handleCGIRequest();
+		if ((_client->route->cgi_extension.find(extension)) != _client->route->cgi_extension.end())
+		{
+			
+			return(handleCGIRequest());
 		}
-		else {
+		else
+		{
 			handleFileRequest();
+			return true;
 		}
 	}
+	return true;
 }
 
 std::string parseCookies(const std::string &cookieHeader, const std::string &key)
@@ -411,11 +512,45 @@ std::string parseCookies(const std::string &cookieHeader, const std::string &key
 
 	return "";
 }
+bool fd_getline(int fd, std::string &line)
+{
+	line.clear();
+	char c;
+	ssize_t n;
+	while ((n = read(fd, &c, 1)) == 1)
+	{
+		if (c == '\n')
+			break;
+		if (c != '\r')
+			line += c;
+	}
+
+	return (!line.empty() || n == 1);
+}
 
 void Response::handleLoginRequest()
 {
+	
 	std::string action, username, note;
 	std::string line;
+
+	int fd = _client->Srequest.fd_file;
+    lseek(fd, 0, SEEK_SET);
+
+	while (fd_getline(fd, line))
+	{
+		size_t colonPos = line.find(':');
+		if (colonPos != std::string::npos)
+		{
+			
+			std::string key = line.substr(0, colonPos);
+			std::string value = line.substr(colonPos + 1);
+
+			if (key == "action") action = value;
+			else if (key == "username") username = value;
+			else if (key == "note") note = value;
+		}
+	}
 
 	if (action == "login" && !username.empty())
 	{
@@ -437,9 +572,11 @@ void Response::handleLoginRequest()
 		else
 		{
 			setStatus(401);
-			if (error_page("401") == 1) {
+			if (error_page("401") == 1)
+			{
 				return;
 			}
+
 			_body = "status:error\nmessage:No active session";
 		}
 	}
@@ -457,113 +594,121 @@ void Response::handleLoginRequest()
 	else
 	{
 		setStatus(400);
-		if (error_page("400") == 1) {
+		if (error_page("400") == 1)
+		{
 			return;
 		}
+
 		_body = "status:error\nmessage:Invalid request";
 	}
 
 	_bytesToSend = _body.size();
 }
 
-void Response::handlePostRequest()
+bool Response::handlePostRequest()
 {
-  size_t dotPos = _filePath.find_last_of(".");
+	
 
-  if (dotPos != std::string::npos)
-  {
-    std::string extension = _filePath.substr(dotPos);
-    if (_client->route->cgi_extension.find(extension) != _client->route->cgi_extension.end())
-    {
-      handleCGIRequest();
-    }
-    else if (_client->Srequest.path == "/pages/login.html")
-    {
-      handleLoginRequest();
-    }
-	else if (_client->Srequest.path == "/submit-upload")
+	size_t dotPos = _filePath.find_last_of(".");
+
+	if (dotPos != std::string::npos)
 	{
-		std::map<std::string, std::string>::iterator it = _client->Srequest.headers.find("X-File-Name");
-		std::string fileName;
-		if (it != _client->Srequest.headers.end())
-			fileName = it->second;
-		else
-			fileName = "uploaded_file";
-	
-		if (_client->route->upload_dir.empty())
+		std::string extension = _filePath.substr(dotPos);
+		if (_client->route->cgi_extension.find(extension) != _client->route->cgi_extension.end())
 		{
-			setStatus(403);
-			_body = "<html><body> < h1>403 Forbidden</h1 > < p>Upload directory not configured.</p></body></html>";
-			_bytesToSend = _body.size();
-			return;
+
+			return(handleCGIRequest());
 		}
-	
-		// Check if upload directory exists, create if not
-		std::string uploadDirPath = "." + _client->route->upload_dir;
-		struct stat st;
-		if (stat(uploadDirPath.c_str(), &st) != 0)
+		else if (_client->Srequest.path == "/pages/login.html")
 		{
-			// Directory does not exist, create it with 0755 permissions
-			if (mkdir(uploadDirPath.c_str(), 0755) != 0)
+			handleLoginRequest();
+		}
+		else if (_client->Srequest.path == "/submit-upload")
+		{
+			std::map<std::string, std::string>::iterator it = _client->Srequest.headers.find("X-File-Name");
+			std::string fileName;
+			if (it != _client->Srequest.headers.end())
+				fileName = it->second;
+			else
+				fileName = "uploaded_file";
+
+			if (_client->route->upload_dir.empty())
 			{
-				setStatus(500);
-				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to create upload directory.</p></body></html>";
+				setStatus(403);
+				_body = "<html><body> < h1>403 Forbidden</h1 > < p>Upload directory not configured.</p></body></html>";
 				_bytesToSend = _body.size();
-				return;
+				return true;
 			}
-		}
-	
-		std::string uploadPath = uploadDirPath + "/" + fileName;
-		if (access(uploadPath.c_str(), F_OK) == 0)
-		{
-			setStatus(409);
-			_body = "<html><body> < h1>409 Conflict</h1 > < p>File already exists.</p></body></html>";
+
+			// Check if upload directory exists, create if not
+			std::string uploadDirPath = "." + _client->route->upload_dir;
+			struct stat st;
+			if (stat(uploadDirPath.c_str(), &st) != 0)
+			{
+			 	// Directory does not exist, create it with 0755 permissions
+				if (mkdir(uploadDirPath.c_str(), 0755) != 0)
+				{
+					setStatus(500);
+					_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to create upload directory.</p></body></html>";
+					_bytesToSend = _body.size();
+					return true;
+				}
+			}
+
+			std::string uploadPath = uploadDirPath + "/" + fileName;
+			if (access(uploadPath.c_str(), F_OK) == 0)
+			{
+				setStatus(409);
+				_body = "<html><body> < h1>409 Conflict</h1 > < p>File already exists.</p></body></html>";
+				_bytesToSend = _body.size();
+				return true;
+			}
+
+			if (rename(_client->Srequest.filename.c_str(), uploadPath.c_str()) != 0)
+			{
+				perror("rename failed");
+				setStatus(500);
+				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
+			}
+			else
+			{
+				setStatus(201);
+				_body = "<html><body> < h1>201 Created</h1 > < p>File uploaded successfully.</p></body></html>";
+			}
+
 			_bytesToSend = _body.size();
-			return;
-		}
-	
-		if (rename(_client->Srequest.filename.c_str(), uploadPath.c_str()) != 0)
-		{
-			perror("rename failed");
-			setStatus(500);
-			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
 		}
 		else
 		{
-			setStatus(201);
-			_body = "<html><body> < h1>201 Created</h1 > < p>File uploaded successfully.</p></body></html>";
+			delete_file(_client->Srequest.filename);
+			setStatus(403);
+			if (error_page("403") == 1)
+			{
+				return true;
+			}
+
+			_body = "<html><body> < h1>403 Forbidden</h1><p></p></body></html>";
 		}
-	
-		_bytesToSend = _body.size();
 	}
-    else
-    {
-      unlink(_client->Srequest.filename.c_str());
-      std::cout << "DELETED 3: " << _client->Srequest.filename.c_str();
-      setStatus(403);
-      if (error_page("403") == 1)
-      {
-        return;
-      }
 
-      _body = "<html><body> < h1>403 Forbidden</h1><p></p></body></html>";
-    }
-  }
-
-  _bytesToSend = _body.size();
+	_bytesToSend = _body.size();
+	return true;
 }
 
 
 
-void Response::handleDeleteRequest() {
+void Response::handleDeleteRequest()
+{
 	struct stat fileStat;
 
 	if (stat(_filePath.c_str(), &fileStat) != 0)
 	{
 		setStatus(404);
-		if (error_page("404") == 1) {
+		if (error_page("404") == 1)
+		{
 			return;
 		}
+
 		_body = "<html><body> < h1>404 Not Found</h1 > < p>The resource does not exist.</p></body></html>";
 		_bytesToSend = _body.size();
 		return;
@@ -572,9 +717,11 @@ void Response::handleDeleteRequest() {
 	if (S_ISDIR(fileStat.st_mode))
 	{
 		setStatus(403);
-		if (error_page("403") == 1) {
+		if (error_page("403") == 1)
+		{
 			return;
 		}
+
 		_body = "<html><body> < h1>403 Forbidden</h1 > < p>Cannot delete a directory.</p></body></html>";
 		_bytesToSend = _body.size();
 		return;
@@ -583,9 +730,11 @@ void Response::handleDeleteRequest() {
 	if (unlink(_filePath.c_str()) != 0)
 	{
 		setStatus(500);
-		if (error_page("500") == 1) {
+		if (error_page("500") == 1)
+		{
 			return;
 		}
+
 		_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to delete the resource.</p></body></html>";
 		_bytesToSend = _body.size();
 		return;
@@ -596,123 +745,209 @@ void Response::handleDeleteRequest() {
 	_bytesToSend = _body.size();
 }
 
+
 void Response::response_handler()
 {
-	if (_client->get_request_status() == Failed)
+	
+	switch (_handlerState)
 	{
-		_headers += "Connection: closed\r\n";
-	}
-	if (!_headersSent) {
-		if (_client->Srequest.error_status != 0) {
-			setStatus(_client->Srequest.error_status);
-			if (error_page(to_string(_client->Srequest.error_status)) == 0) {
-				_body = "<html><body><h1>" + _status + "</h1 > < p>An error occurred processing your request.</p></body></html>";
-				_bytesToSend = _body.size();
+		case HSTATE_ERROR_CHECK:
+
+			if (_client->Srequest.error_status != 0)
+			{
+				setStatus(_client->Srequest.error_status);
+				if (error_page(to_string(_client->Srequest.error_status)) == 0)
+				{
+					_body = "<html><body><h1>" + _status + "</h1 > < p>An error occurred processing your request.</p></body></html>";
+					_bytesToSend = _body.size();
+				}
+
+				_handlerState = HSTATE_SET_HEADERS;
 			}
-		}
-		else {
-			if (!(_client->route->redirect.empty())) {
+			else
+			{
+				_handlerState = HSTATE_REDIRECT_CHECK;
+			}
+
+			break;
+
+		case HSTATE_REDIRECT_CHECK:
+			if (!_client->route->redirect.empty())
+			{
 				setStatus(301);
 				_headers = "Location: " + _client->route->redirect + "\r\n";
+				_handlerState = HSTATE_SET_HEADERS;
 			}
-			else {
-				resolveFilePath();
+			else
+			{
+				_handlerState = HSTATE_RESOLVE_PATH;
+			}
 
-				if (_client->Srequest.method == "GET") {
-					handleGetRequest();
-				}
-				else if (_client->Srequest.method == "POST") {
-					handlePostRequest();
-				}
-				else if (_client->Srequest.method == "DELETE") {
-					handleDeleteRequest();
-				}
-				else {
-					setStatus(501);
-					if (error_page("501") == 0) {
-						_body = "<html><body> < h1>501 Not Implemented</h1 > < p>The requested method is not supported.</p></body></html>";
-						_bytesToSend = _body.size();
-					}
+			break;
+
+		case HSTATE_RESOLVE_PATH:
+			resolveFilePath();
+			_handlerState = HSTATE_HANDLE_METHOD;
+			break;
+
+		case HSTATE_HANDLE_METHOD:
+			if (_client->Srequest.method == "GET")
+			{
+				if (!handleGetRequest())
+					return ;
+			}
+			else if (_client->Srequest.method == "POST")
+			{
+				if(!handlePostRequest())
+					return ;
+			}
+			else if (_client->Srequest.method == "DELETE")
+			{
+				handleDeleteRequest();
+			}
+			else
+			{
+				setStatus(501);
+				if (error_page("501") == 0)
+				{
+					_body = "<html><body> < h1>501 Not Implemented</h1 > < p>The requested method is not supported.</p></body></html>";
+					_bytesToSend = _body.size();
 				}
 			}
-		}
-		setHeaders();
 
-		std::string responseHeader = "HTTP/1.1 " + _status + "\r\n" + _headers;
-		ssize_t bytesSent = send(_client->get_socket_fd(), responseHeader.c_str(), responseHeader.size(), 0);
+			_handlerState = HSTATE_SET_HEADERS;
+			break;
 
-		if (bytesSent < 0) {
-			std::cerr << "Error sending response headers to client FD " << _client->get_socket_fd() << std::endl;
-			return;
-		}
-		_headersSent = true;
-		_bytesSent = 0;
-	}
-	bool completed = sendResponseChunk();
+		case HSTATE_SET_HEADERS:
+			setHeaders();
+			_headerBuffer = "HTTP/1.1 " + _status + "\r\n" + _headers;
+			_headerSent = 0;
+			_handlerState = HSTATE_SEND_HEADERS;
+			break;
 
-	if (completed) {
-		_client->set_response_status(Complete);
-		std::cout << Logger::trace_http("TRACE", _client->client_ip, _client->client_port, 
-			_client->Srequest.method, _client->Srequest.path, 
-			_client->Srequest.version, _client->res._status, 
-			to_string(current_time_in_ms() - _client->time_start_));
+		case HSTATE_SEND_HEADERS:
+			{
+				if (sendResponseChunk(true))
+				{
+					_bytesSent = 0;
+					_handlerState = HSTATE_SEND_BODY;
+				}
+
+				break;
+			}
+
+		case HSTATE_SEND_BODY:
+			{
+				if (sendResponseChunk(false))
+				{
+					_handlerState = HSTATE_COMPLETE;
+				}
+
+				break;
+			}
+
+		case HSTATE_COMPLETE:
+			_client->set_response_status(Complete);
+			std::cout << Logger::trace_http("TRACE", _client->client_ip, _client->client_port,
+				_client->Srequest.method, _client->Srequest.path,
+				_client->Srequest.version, _client->res._status,
+				to_string(current_time_in_ms() - _client->time_start_));
+			break;
+
+		case HSTATE_ERROR:
+			break;
 	}
 }
 
-bool Response::sendResponseChunk()
+bool Response::sendResponseChunk(bool sendHeader)
 {
-	if (_file_path_fd > 0)
+	// Send header if requested
+	if (sendHeader)
 	{
-		ssize_t bytesRead = read(_file_path_fd, _buffer, MAX_SEND);
-		if (bytesRead > 0)
+		if (_headerSent < _headerBuffer.size())
 		{
-			ssize_t bytesSent = send(_client->get_socket_fd(), _buffer, bytesRead, 0);
+			ssize_t bytesSent = send(_client->get_socket_fd(),
+				_headerBuffer.c_str() + _headerSent,
+				_headerBuffer.size() - _headerSent, 0);
 			if (bytesSent < 0)
 			{
-				std::cerr << "Error sending file chunk to client FD " << _client->get_socket_fd() << std::endl;
-				close_fd(_file_path_fd);
+				std::cerr << "Error sending response headers to client FD " << _client->get_socket_fd() << std::endl;
 				return true;
 			}
 
+			_headerSent += bytesSent;
 			_client->time_client_ = time(NULL);
-			_bytesSent += bytesSent;
-
-			if (_bytesSent >= _bytesToSend || bytesRead < MAX_SEND)
-			{
-				close_fd(_file_path_fd);
-				return true;
-			}
-
-			return false;
-		}
-		else
-		{
-			close_fd(_file_path_fd);
-			return true;
-		}
-	}
-	else if (_bytesToSend > 0)
-	{
-		ssize_t bytesSent = send(_client->get_socket_fd(), _body.c_str() + _bytesSent, _bytesToSend - _bytesSent, 0);
-		_client->time_client_ = time(NULL);
-
-		if (bytesSent < 0)
-		{
-			std::cerr << "Error sending response body to client FD " << _client->get_socket_fd() << std::endl;
-			return true;
+			if (_headerSent < _headerBuffer.size())
+				return false;
 		}
 
-		_bytesSent += bytesSent;
-
-		if (_bytesSent >= _bytesToSend)
-		{
-			return true;
-		}
-
-		return false;
-	}
-	else
-	{
 		return true;
 	}
+
+	if (_body.size() > 0)
+	{
+		if (_bytesSent < _bytesToSend)
+		{
+			ssize_t bytesSent = send(_client->get_socket_fd(), _body.c_str() + _bytesSent, _bytesToSend - _bytesSent, 0);
+			if (bytesSent < 0)
+			{
+				std::cerr << "Error sending response body to client FD " << _client->get_socket_fd() << std::endl;
+				return true;
+			}
+
+			_bytesSent += bytesSent;
+			_client->time_client_ = time(NULL);
+		}
+
+		return (_bytesSent >= _bytesToSend);
+	}
+
+
+	if (_file_path_fd > 0)
+	{
+		switch (_sendState)
+		{
+			case SEND_IDLE:
+			case SEND_READING:
+				_bufferLen = read(_file_path_fd, _buffer, MAX_SEND);
+				_bufferSent = 0;
+				if (_bufferLen > 0)
+				{
+					_sendState = SEND_SENDING;
+				}
+				else
+				{
+					close_fd(_file_path_fd);
+					_sendState = SEND_DONE;
+					return true;
+				}
+			case SEND_SENDING:
+				if (_bufferSent < _bufferLen)
+				{
+					ssize_t bytesSent = send(_client->get_socket_fd(), _buffer + _bufferSent, _bufferLen - _bufferSent, 0);
+					if (bytesSent < 0)
+					{
+						std::cerr << "Error sending file chunk to client FD " << _client->get_socket_fd() << std::endl;
+						close_fd(_file_path_fd);
+						_sendState = SEND_DONE;
+						return true;
+					}
+
+					_bufferSent += bytesSent;
+					_client->time_client_ = time(NULL);
+				}
+
+				if (_bufferSent >= _bufferLen)
+				{
+					_sendState = SEND_READING;
+				}
+
+				return false;
+			case SEND_DONE:
+				return true;
+		}
+	}
+
+
+	return false;
 }

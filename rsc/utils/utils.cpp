@@ -148,3 +148,15 @@ void close_fd(int &fd)
 	    fd = -1;
     }
 };
+
+void delete_file(std::string &filename)
+{
+    if (!filename.empty())
+    {
+        if (access(filename.c_str(), F_OK) == 0)
+        {
+            unlink(filename.c_str());
+        }
+        filename.clear();
+    }
+};

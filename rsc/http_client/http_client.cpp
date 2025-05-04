@@ -2,6 +2,17 @@
 #include "../../Includes/http_client/http_client.hpp"
 #include "../../Includes/utlis/utils.hpp"
 
+
+HttpClient::~HttpClient()
+{
+  close_fd(socket_fd_);
+}
+
+HttpClient::HttpClient()
+{
+
+}
+
 HttpClient::HttpClient(int client_socket, std::string client_ip,
                        uint16_t client_port)
     : SMrequest() {
@@ -70,6 +81,7 @@ void HttpClient::reset() {
   res._client = this;
   Srequest._client = this;
 }
+
 void handleConnectionHeader(HttpClient **c, int epfdMaster)
 {
   if ((*c)->get_request_status() == Failed) {
@@ -140,8 +152,7 @@ void handleClientDisconnection(HttpClient *c, int epfdMaster) {
     Logger::error("Failed to remove client " + to_string(fd) +
                   " from epoll: " + std::string(strerror(errno)));
   }
-  std::map<int, EpollEventContext *> &FileDescriptorList =
-      c->server->getServerConfigParser()->getFileDescriptorList();
+  std::map<int, EpollEventContext *> &FileDescriptorList = c->server->getServerConfigParser()->getFileDescriptorList();
   EpollEventContext *ctx = FileDescriptorList[fd];
   if (ctx) {
     if (ctx->httpClient) {
@@ -197,6 +208,11 @@ void handleClientTimeouts(
                   << client_ip << ":" << client_port << " " << Color::YELLOW
                   << "\"TIMEOUT after " << elapsed << "s\"" << Color::RESET
                   << std::endl;
+        if (ctx->httpClient->res.getpid() > 0)
+        {
+          kill(ctx->httpClient->res.getpid(), SIGKILL);
+          std::cout << "process killed\n";
+        }
         handleClientDisconnection(ctx->httpClient, epfdMaster);
         it = FileDescriptorList.upper_bound(fd);
         continue;
