@@ -11,7 +11,6 @@ std::string trim(const std::string &str) {
   return str.substr(start, end - start + 1);
 }
 bool ValidMediaType(const std::string &media_type) {
-
   if (media_type == "text/plain" ||
       media_type == "application/x-www-form-urlencoded" ||
       media_type == "multipart/form-data" || media_type == "application/json" ||

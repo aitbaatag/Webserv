@@ -2,16 +2,9 @@
 #include "../../Includes/http_client/http_client.hpp"
 #include "../../Includes/utlis/utils.hpp"
 
+HttpClient::~HttpClient() { close_fd(socket_fd_); }
 
-HttpClient::~HttpClient()
-{
-  close_fd(socket_fd_);
-}
-
-HttpClient::HttpClient()
-{
-
-}
+HttpClient::HttpClient() {}
 
 HttpClient::HttpClient(int client_socket, std::string client_ip,
                        uint16_t client_port)
@@ -82,12 +75,11 @@ void HttpClient::reset() {
   Srequest._client = this;
 }
 
-void handleConnectionHeader(HttpClient **c, int epfdMaster)
-{
+void handleConnectionHeader(HttpClient **c, int epfdMaster) {
   if ((*c)->get_request_status() == Failed) {
     handleClientDisconnection(*c, epfdMaster);
     *c = NULL;
-    return ;
+    return;
   }
   std::map<std::string, std::string>::iterator it =
       (*c)->Srequest.headers.find("Connection");
@@ -99,11 +91,11 @@ void handleConnectionHeader(HttpClient **c, int epfdMaster)
       *c = NULL;
     } else {
       (*c)->reset();
-      return ;
+      return;
     }
   } else {
     (*c)->reset();
-    return ;
+    return;
   }
 }
 
@@ -123,10 +115,12 @@ void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
   }
 
   // Handle EPOLLOUT: Send response data
-  if ((event->events & EPOLLOUT) && c && (c->get_request_status() == Complete || c->get_request_status() == Failed))
-  {
+  if ((event->events & EPOLLOUT) && c &&
+      (c->get_request_status() == Complete ||
+       c->get_request_status() == Failed)) {
     try {
       c->res.response_handler();
+
       if (c->get_response_status() == Complete) {
         handleConnectionHeader(&c, epfdMaster);
       }
@@ -138,8 +132,7 @@ void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
       return;
     }
   }
-  if (c)
-  {
+  if (c) {
     c->getReadTrack().clear();
     c->getWriteTrack().clear();
   }
@@ -152,7 +145,8 @@ void handleClientDisconnection(HttpClient *c, int epfdMaster) {
     Logger::error("Failed to remove client " + to_string(fd) +
                   " from epoll: " + std::string(strerror(errno)));
   }
-  std::map<int, EpollEventContext *> &FileDescriptorList = c->server->getServerConfigParser()->getFileDescriptorList();
+  std::map<int, EpollEventContext *> &FileDescriptorList =
+      c->server->getServerConfigParser()->getFileDescriptorList();
   EpollEventContext *ctx = FileDescriptorList[fd];
   if (ctx) {
     if (ctx->httpClient) {
@@ -208,8 +202,7 @@ void handleClientTimeouts(
                   << client_ip << ":" << client_port << " " << Color::YELLOW
                   << "\"TIMEOUT after " << elapsed << "s\"" << Color::RESET
                   << std::endl;
-        if (ctx->httpClient->res.getpid() > 0)
-        {
+        if (ctx->httpClient->res.getpid() > 0) {
           kill(ctx->httpClient->res.getpid(), SIGKILL);
           std::cout << "process killed\n";
         }
@@ -237,34 +230,31 @@ void addConfigServer(ServerConfig &serversConfig,
   servers.push_back(newServer);
 }
 
-void HttpClient::deleteFileEpoll(int fd)
-{
-	std::map<int, EpollEventContext*> &FileDescriptorList = server->getServerConfigParser()->getFileDescriptorList();
+void HttpClient::deleteFileEpoll(int fd) {
+  std::map<int, EpollEventContext *> &FileDescriptorList =
+      server->getServerConfigParser()->getFileDescriptorList();
 
-	if (epoll_ctl(server->getEpfdMaster(), EPOLL_CTL_DEL, fd, NULL)<		0)
-	{
-		throw std::runtime_error("Failed to remove file from epoll");
-	}
+  if (epoll_ctl(server->getEpfdMaster(), EPOLL_CTL_DEL, fd, NULL) < 0) {
+    throw std::runtime_error("Failed to remove file from epoll");
+  }
 
-	std::map<int, EpollEventContext*>::iterator it = FileDescriptorList.find(fd);
-	if (it != FileDescriptorList.end())
-	{
-		delete it->second;
-		FileDescriptorList.erase(it);
-	}
+  std::map<int, EpollEventContext *>::iterator it = FileDescriptorList.find(fd);
+  if (it != FileDescriptorList.end()) {
+    delete it->second;
+    FileDescriptorList.erase(it);
+  }
 }
 
-void HttpClient::registerFileEpoll(int fd)
-{
-	std::map<int, EpollEventContext*> &FileDescriptorList = server->getServerConfigParser()->getFileDescriptorList();
+void HttpClient::registerFileEpoll(int fd) {
+  std::map<int, EpollEventContext *> &FileDescriptorList =
+      server->getServerConfigParser()->getFileDescriptorList();
 
-	struct epoll_event ev;
-	ev.events = EPOLLIN | EPOLLOUT;
-	ev.data.fd = fd;
-	ev.data.ptr = EpollEventContext::createFileData(fd, this);
-	FileDescriptorList[fd] = static_cast<EpollEventContext*> (ev.data.ptr);
-	if (epoll_ctl(server->getEpfdMaster(), EPOLL_CTL_ADD, fd, &ev) < 0)
-	{
-		throw std::runtime_error("Failed to add file to epoll");
-	}
+  struct epoll_event ev;
+  ev.events = EPOLLIN | EPOLLOUT;
+  ev.data.fd = fd;
+  ev.data.ptr = EpollEventContext::createFileData(fd, this);
+  FileDescriptorList[fd] = static_cast<EpollEventContext *>(ev.data.ptr);
+  if (epoll_ctl(server->getEpfdMaster(), EPOLL_CTL_ADD, fd, &ev) < 0) {
+    throw std::runtime_error("Failed to add file to epoll");
+  }
 }
