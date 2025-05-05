@@ -24,7 +24,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
         client.set_request_status(Failed);
         return true;
       }
-      // client.registerFileEpoll(client.Srequest.fd_file);
       client.SMrequest.stateChunk = STATE_CHUNK_SIZE;
       continue;
     }
@@ -98,7 +97,6 @@ bool HttpRequest::parseChunkedBody(HttpClient &client) {
 
       if (to_write > 0) {
         write(client.Srequest.fd_file, reqBuff + pos, to_write);
-        std::cout << "Writing " << to_write << std::endl;
         if (client.Srequest.fd_file < 0) {
           client.Srequest.error_status = 500;
           client.set_request_status(Failed);

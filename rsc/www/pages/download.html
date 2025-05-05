@@ -152,7 +152,7 @@
     <script>
         async function loadFiles() {
             try {
-                const response = await fetch('/pages/');
+                const response = await fetch('/upload/');
                 const html = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
@@ -204,7 +204,7 @@
             try {
                 // Create an anchor element for downloading
                 const link = document.createElement('a');
-                link.href = `/pages/${selectedFile.value}`;
+                link.href = `/upload/${selectedFile.value}`;
                 link.download = selectedFile.value;
                 link.setAttribute('type', 'application/octet-stream');
                 document.body.appendChild(link);

@@ -799,6 +799,7 @@ bool Response::sendResponseChunk(bool sendHeader) {
       ssize_t bytesSent =
           send(_client->get_socket_fd(), _body.c_str() + _bytesSent,
                _bytesToSend - _bytesSent, 0);
+
       if (bytesSent < 0) {
         std::cerr << "Error sending response body to client FD "
                   << _client->get_socket_fd() << std::endl;

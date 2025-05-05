@@ -30,7 +30,6 @@ bool HttpRequest::ParseContent_Type(HttpClient &client) {
   if (!ValidMediaType(media_type)) {
     client.Srequest.error_status = 415; // Unsupported Media Type
     client.set_request_status(Failed);
-    std::cout << "Unsupported Media Type" << std::endl;
     return false;
   }
   field_body = field_body.substr(semicolonPos + 1);

@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -415,19 +416,18 @@
 			const fileInput = document.getElementById('fileInput');
 			const curlCommandBox = document.getElementById('curlCommand');
 			const uploadButton = document.getElementById('uploadButton');
-			int
+			
 			chunkedCheckbox.addEventListener('change', function () {
 			    if (this.checked) {
 			        fileInput.style.display = 'none';
 			        curlCommandBox.style.display = 'block';
-			        curlCommandBox.textContent = 'curl -X POST -H "X-File-Name: test" -H "Transfer-Encoding: chunked" -H "Content-Type: text/plain" --upload-file "file_path" http://localhost:8081/submit-upload';
+			        curlCommandBox.textContent = ' curl -X POST -H "Transfer-Encoding: chunked" -H "X-File-Name: Set Name Here " -H "Content-Type: text/plain"  --upload-file FilePath http://localhost:PORT/submit-upload';
 			        uploadButton.disabled = true;
 			    } else {
 			        fileInput.style.display = 'block';
 			        curlCommandBox.style.display = 'none';
 			        curlCommandBox.textContent = '';
 			        uploadButton.disabled = false;
-					
 			    }
 			});
 		</script>    
