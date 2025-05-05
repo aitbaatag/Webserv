@@ -216,6 +216,8 @@ void Response::setHeaders()
 	time_t now = time(0);
 	struct tm *timeinfo = gmtime(&now);
 	strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	if (_body.size() > 0)
+		_bytesToSend = _body.size();
 	
 	_headers += "Content-Type: " + _contentType + "\r\n";
 	_headers += "Date: " + std::string(buffer) + "\r\n";
@@ -253,12 +255,10 @@ void Response::handleDirectoryListing() {
     DIR *dir = opendir(_filePath.c_str());
 
     if (!dir) {
-		if (error_page("403") == 1) {
+		if (error_page("403") == 0) {
+			_body = "<html><body><h1>403 Forbidden</h1><p>Cannot access directory.</p></body></html>";
 			return;
 		}
-        _body = "<html><body><h1>403 Forbidden</h1><p>Cannot access directory.</p></body></html>";
-        _bytesToSend = _body.size();
-        return;
     }
 
     html << "<!DOCTYPE html><html lang=\"en\"><head>";
@@ -338,7 +338,6 @@ void Response::handleDirectoryListing() {
     
     closedir(dir);
     _body = html.str();
-    _bytesToSend = _body.size();
     setStatus(200);
 }
 
@@ -352,11 +351,9 @@ void Response::handleFileRequest() {
 				return;
 			}
 			else {
-				if (error_page("403") == 1) {
-					return;
+				if (error_page("403") == 0) {
+					_body = "<html><body> < h1>403 Forbidden</h1 > < p>Directory access denied or Directory listing not allowed.</p></body></html>";
 				}
-				_body = "<html><body> < h1>403 Forbidden</h1 > < p>Directory access denied or Directory listing not allowed.</p></body></html>";
-				_bytesToSend = _body.size();
 				return;
 			}
 		}
@@ -368,20 +365,16 @@ void Response::handleFileRequest() {
 			setStatus(200);
 		}
 		else {
-			if (error_page("403") == 1) {
-				return;
+			if (error_page("403") == 0) {
+				_body = "<html><body> < h1>403 Forbidden</h1 > < p>Cannot access file.</p></body></html>";
 			}
-			_body = "<html><body> < h1>403 Forbidden</h1 > < p>Cannot access file.</p></body></html>";
-			_bytesToSend = _body.size();
 		}
 	}
 	else
 	{
-		if (error_page("404") == 1) {
-			return;
+		if (error_page("404") == 0) {
+			_body = "<html><body> < h1>404 Not Found</h1 > < p>The requested resource could not be found.</p></body></html>";
 		}
-		_body = "<html><body> < h1>404 Not Found</h1 > < p>The requested resource could not be found.</p></body></html>";
-		_bytesToSend = _body.size();
 	}
 }
 
@@ -555,11 +548,9 @@ void Response::handleLoginRequest()
 		}
 		else
 		{
-			if (error_page("401") == 1) {
-				return;
+			if (error_page("401") == 0) {
+				_body = "status:error\nmessage:No active session";
 			}
-
-			_body = "status:error\nmessage:No active session";
 		}
 	}
 	else if (action == "logout")
@@ -574,14 +565,77 @@ void Response::handleLoginRequest()
 	}
 	else
 	{
-		if (error_page("400") == 1) {
-			return;
+		if (error_page("400") == 0) {
+			_body = "status:error\nmessage:Invalid request";
 		}
+	}
+}
 
-		_body = "status:error\nmessage:Invalid request";
+bool Response::handleUploadRequest()
+{
+	std::map<std::string, std::string>::iterator it_ = _client->Srequest.headers.find("Content-Type");
+
+	if (it_ == _client->Srequest.headers.end() || it_->second != "text/plain")
+	{
+		delete_file(_client->Srequest.filename);
+		if (error_page("415") == 0) {
+			_body = "<html><body> < h1>415 Unsupported Media Type</h1 > < p>Unsupported media type.</p></body></html>";
+			return true;
+		}
 	}
 
-	_bytesToSend = _body.size();
+	std::map<std::string, std::string>::iterator it = _client->Srequest.headers.find("X-File-Name");
+	std::string fileName;
+
+	if (it != _client->Srequest.headers.end())
+		fileName = it->second;
+	else
+		fileName = "uploaded_file";
+
+	if (_client->route->upload_dir.empty())
+	{
+		if (error_page("403") == 0) {
+			_body = "<html><body> < h1>403 Forbidden</h1 > < p>Upload directory not configured.</p></body></html>";
+		}
+		return true;
+	}
+
+	std::string uploadDirPath = "." + _client->route->upload_dir;
+	struct stat st;
+
+	if (stat(uploadDirPath.c_str(), &st) != 0)
+	{
+		if (mkdir(uploadDirPath.c_str(), 0755) != 0)
+		{
+			if (error_page("500") == 0) {
+				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to create upload directory.</p></body></html>";
+			}
+			return true;
+		}
+	}
+
+	std::string uploadPath = uploadDirPath + "/" + fileName;
+	if (access(uploadPath.c_str(), F_OK) == 0)
+	{
+		if (error_page("409") == 0) {
+			_body = "<html><body> < h1>409 Conflict</h1 > < p>File already exists.</p></body></html>";
+		}
+		return true;
+	}
+
+	if (rename(_client->Srequest.filename.c_str(), uploadPath.c_str()) != 0)
+	{
+		perror("rename failed");
+		if (error_page("500") == 0) {
+			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
+		}
+	}
+	else
+	{
+		setStatus(201);
+		_body = "<html><body> < h1>201 Created</h1 > < p>File uploaded successfully.</p></body></html>";
+	}
+	return true;
 }
 
 bool Response::handlePostRequest()
@@ -597,94 +651,18 @@ bool Response::handlePostRequest()
 		else if (_client->Srequest.path == "/pages/login.html") {
 			handleLoginRequest();
 		}
-		else if (_client->Srequest.path == "/submit-upload")
-		{
-			std::map<std::string, std::string>::iterator it_ = _client->Srequest.headers.find("Content-Type");
-			//check for unsupported media type
-			if (it_ == _client->Srequest.headers.end() || it_->second != "text/plain")
-			{
-				delete_file(_client->Srequest.filename);
-				if (error_page("415") == 1) {
-					return true;
-				}
-				_body = "<html><body> < h1>415 Unsupported Media Type</h1 > < p>Unsupported media type.</p></body></html>";
-				_bytesToSend = _body.size();
-				return true;
-			}
-
-			std::map<std::string, std::string>::iterator it = _client->Srequest.headers.find("X-File-Name");
-			std::string fileName;
-			if (it != _client->Srequest.headers.end())
-				fileName = it->second;
-			else
-				fileName = "uploaded_file";
-
-			if (_client->route->upload_dir.empty())
-			{
-				if (error_page("403") == 1) {
-					return true;
-				}
-				_body = "<html><body> < h1>403 Forbidden</h1 > < p>Upload directory not configured.</p></body></html>";
-				_bytesToSend = _body.size();
-				return true;
-			}
-
-			// Check if upload directory exists, create if not
-			std::string uploadDirPath = "." + _client->route->upload_dir;
-			struct stat st;
-			if (stat(uploadDirPath.c_str(), &st) != 0)
-			{
-			 	// Directory does not exist, create it with 0755 permissions
-				if (mkdir(uploadDirPath.c_str(), 0755) != 0)
-				{
-					if (error_page("500") == 1) {
-						return true;
-					}
-					_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to create upload directory.</p></body></html>";
-					_bytesToSend = _body.size();
-					return true;
-				}
-			}
-
-			std::string uploadPath = uploadDirPath + "/" + fileName;
-			if (access(uploadPath.c_str(), F_OK) == 0)
-			{
-				if (error_page("409") == 1) {
-					return true;
-				}
-				_body = "<html><body> < h1>409 Conflict</h1 > < p>File already exists.</p></body></html>";
-				_bytesToSend = _body.size();
-				return true;
-			}
-
-			if (rename(_client->Srequest.filename.c_str(), uploadPath.c_str()) != 0)
-			{
-				perror("rename failed");
-				if (error_page("500") == 1) {
-					return true;
-				}
-				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to save uploaded file.</p></body></html>";
-			}
-			else
-			{
-				setStatus(201);
-				_body = "<html><body> < h1>201 Created</h1 > < p>File uploaded successfully.</p></body></html>";
-			}
-
-			_bytesToSend = _body.size();
+		else if (_client->Srequest.path == "/submit-upload") {
+			handleUploadRequest();
 		}
 		else
 		{
 			delete_file(_client->Srequest.filename);
-			if (error_page("403") == 1) {
-				return true;
+			if (error_page("403") == 0) {
+				_body = "<html><body> < h1>403 Forbidden</h1><p></p></body></html>";
 			}
-
-			_body = "<html><body> < h1>403 Forbidden</h1><p></p></body></html>";
 		}
 	}
 
-	_bytesToSend = _body.size();
 	return true;
 }
 
@@ -696,40 +674,30 @@ void Response::handleDeleteRequest()
 
 	if (stat(_filePath.c_str(), &fileStat) != 0)
 	{
-		if (error_page("404") == 1) {
-			return;
+		if (error_page("404") == 0) {
+			_body = "<html><body> < h1>404 Not Found</h1 > < p>The resource does not exist.</p></body></html>";
 		}
-
-		_body = "<html><body> < h1>404 Not Found</h1 > < p>The resource does not exist.</p></body></html>";
-		_bytesToSend = _body.size();
 		return;
 	}
 
 	if (S_ISDIR(fileStat.st_mode))
 	{
-		if (error_page("403") == 1) {
-			return;
+		if (error_page("403") == 0) {
+			_body = "<html><body> < h1>403 Forbidden</h1 > < p>Cannot delete a directory.</p></body></html>";
 		}
-
-		_body = "<html><body> < h1>403 Forbidden</h1 > < p>Cannot delete a directory.</p></body></html>";
-		_bytesToSend = _body.size();
 		return;
 	}
 
 	if (unlink(_filePath.c_str()) != 0)
 	{
-		if (error_page("500") == 1) {
-			return;
+		if (error_page("500") == 0) {
+			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to delete the resource.</p></body></html>";
 		}
-
-		_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to delete the resource.</p></body></html>";
-		_bytesToSend = _body.size();
 		return;
 	}
 
 	setStatus(200);
 	_body = "<html><body> < h1>200 OK</h1 > < p>Resource deleted successfully.</p></body></html>";
-	_bytesToSend = _body.size();
 }
 
 
@@ -741,10 +709,8 @@ void Response::response_handler()
 
 			if (_client->Srequest.error_status != 0)
 			{
-				if (error_page(to_string(_client->Srequest.error_status)) == 0)
-				{
+				if (error_page(to_string(_client->Srequest.error_status)) == 0) {
 					_body = "<html><body><h1>" + _status + "</h1 > < p>An error occurred processing your request.</p></body></html>";
-					_bytesToSend = _body.size();
 				}
 
 				_handlerState = HSTATE_SET_HEADERS;
@@ -789,7 +755,6 @@ void Response::response_handler()
 				if (error_page("501") == 0)
 				{
 					_body = "<html><body> < h1>501 Not Implemented</h1 > < p>The requested method is not supported.</p></body></html>";
-					_bytesToSend = _body.size();
 				}
 			}
 
@@ -883,6 +848,7 @@ bool Response::sendResponseChunk(bool sendHeader)
 		switch (_sendState)
 		{
 			case SEND_IDLE:
+
 			case SEND_READING:
 				_bufferLen = read(_file_path_fd, _buffer, MAX_SEND);
 				_bufferSent = 0;
@@ -895,6 +861,7 @@ bool Response::sendResponseChunk(bool sendHeader)
 					_sendState = SEND_DONE;
 					return true;
 				}
+
 			case SEND_SENDING:
 				if (_bufferSent < _bufferLen)
 				{
@@ -914,8 +881,8 @@ bool Response::sendResponseChunk(bool sendHeader)
 				if (_bufferSent >= _bufferLen) {
 					_sendState = SEND_READING;
 				}
-
 				return false;
+
 			case SEND_DONE:
 				return true;
 		}

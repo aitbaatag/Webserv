@@ -36,8 +36,9 @@ bool Response::handleCGIRequest()
 			}
 
 		case CGI_STATE_ERROR: {
-				return true;
-			}
+			cgiCleanup();
+			return true;
+		}
 
 		default:
 			break;
@@ -66,14 +67,12 @@ void Response::cgiInit()
 
 void Response::cgiFork()
 {
-	close_fd(_client->Srequest.fd_file);
 	int pipeOut[2];
 	if (pipe(pipeOut) == -1)
 	{
-		if (error_page("500") == 1)
-			return;
-		_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Pipe creation failed.</p></body></html>";
 		_cgiState = CGI_STATE_ERROR;
+		if (error_page("500") == 0)
+			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Pipe creation failed.</p></body></html>";
 		return;
 	}
 
@@ -82,10 +81,9 @@ void Response::cgiFork()
 	{
 		close_fd(pipeOut[0]);
 		close_fd(pipeOut[1]);
-		if (error_page("500") == 1)
-			return;
-		_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Fork failed.</p></body></html>";
 		_cgiState = CGI_STATE_ERROR;
+		if (error_page("500") == 0)
+			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Fork failed.</p></body></html>";
 		return;
 	}
 
@@ -104,8 +102,6 @@ void Response::cgiFork()
 		close_fd(pipeOut[1]);
 		char *args[] = { strdup(_client->route->cgi_extension.at(_filePath.substr(_filePath.find_last_of("."))).c_str()), strdup(_filePath.c_str()), NULL
 		};
-
-		execve(args[0], args, &_cgi_envp[0]);
 		execve(args[0], args, &_cgi_envp[0]);
 		free(args[0]);
 		free(args[1]);
@@ -118,10 +114,9 @@ void Response::cgiFork()
 		if (flags == -1 || fcntl(pipeOut[0], F_SETFL, flags | O_NONBLOCK) == -1)
 		{
 			close_fd(pipeOut[0]);
-			if (error_page("500") == 1)
-				return;
-			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to set pipe non-blocking.</p></body></html>";
 			_cgiState = CGI_STATE_ERROR;
+			if (error_page("500") == 0)
+				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to set pipe non-blocking.</p></body></html>";
 			return;
 		}
 
@@ -132,13 +127,11 @@ void Response::cgiFork()
 		{
 			close_fd(_cgi_pipe_fd);
 			_cgi_pipe_fd = -1;
-			if (error_page("500") == 1)
-				return;
-			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to open temp file.</p></body></html>";
 			_cgiState = CGI_STATE_ERROR;
+			if (error_page("500") == 0)
+				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to open temp file.</p></body></html>";
 			return;
 		}
-
 		_cgiState = CGI_STATE_READ_OUTPUT;
 	}
 }
@@ -178,10 +171,9 @@ void Response::cgiProcessResult()
 	}
 	else
 	{
-		if (error_page("500") == 1)
-			return;
-		if (error_page("500") == 0)
+		if (error_page("500") == 0) {
 			_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>CGI script failed.</p></body></html>";
+		}
 	}
 
 	_cgiState = CGI_STATE_CLEANUP;

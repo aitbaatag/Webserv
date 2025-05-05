@@ -56,8 +56,6 @@ class Response
 
 	    char				_buffer[MAX_SEND];
 
-
-
 		/// STATE MACHINE: Send File in CHUNK
 		SendState			_sendState;
 		ssize_t				_bufferLen;
@@ -87,6 +85,7 @@ class Response
 
 	    bool handleGetRequest();
 	    bool handlePostRequest();
+		bool handleUploadRequest();
 	    void handleDeleteRequest();
 	    void handleLoginRequest();
 
@@ -99,7 +98,6 @@ class Response
 	    void setHeaders();
 	    void resolveFilePath();
 		int error_page(std::string error_code);
-
 
 		// CGI
 		void cgiInit();
@@ -114,7 +112,6 @@ class Response
 	    static Route *findMatchingRoute(ServerConfig &server, std::string &path);
 
 	    HttpClient *_client;
-
 	
 };
 

@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX      = c++ -std=c++98
-CXXFLAGS = -I./Includes
+CXXFLAGS = -I./Includes -g3
 
 # Colors
 GREEN    = \033[0;32m
