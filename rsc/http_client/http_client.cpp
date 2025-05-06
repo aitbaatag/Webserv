@@ -19,6 +19,8 @@ HttpClient::HttpClient(int client_socket, std::string client_ip,
   time_client_ = time(NULL);
   res._client = this;
   Srequest._client = this;
+  server_config = NULL;
+  route = NULL;
 }
 
 size_t HttpClient::get_client_time() { return time_client_; };
