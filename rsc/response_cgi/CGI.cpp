@@ -89,7 +89,11 @@ void Response::cgiFork()
 
 	if (_cgi_pid == 0)
 	{
-		int file_fd = open(_client->Srequest.filename.c_str(), O_RDONLY);
+		int file_fd;
+		if (_client->Srequest.filename.empty())
+			file_fd = open("/dev/null", O_RDONLY);
+		else
+			file_fd = open(_client->Srequest.filename.c_str(), O_RDONLY);
 		if (file_fd < 0)
 		{
 			perror("open request body file failed");
@@ -97,11 +101,13 @@ void Response::cgiFork()
 		}
 
 		dup2(file_fd, STDIN_FILENO);
+		close_fd(file_fd);
 		dup2(pipeOut[1], STDOUT_FILENO);
 		close_fd(pipeOut[0]);
 		close_fd(pipeOut[1]);
 		char *args[] = { strdup(_client->route->cgi_extension.at(_filePath.substr(_filePath.find_last_of("."))).c_str()), strdup(_filePath.c_str()), NULL
 		};
+
 		execve(args[0], args, &_cgi_envp[0]);
 		free(args[0]);
 		free(args[1]);
@@ -132,10 +138,10 @@ void Response::cgiFork()
 				_body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to open temp file.</p></body></html>";
 			return;
 		}
+
 		_cgiState = CGI_STATE_READ_OUTPUT;
 	}
 }
-
 void Response::cgiReadOutput()
 {
 	char buffer[MAX_SEND];

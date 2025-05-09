@@ -78,6 +78,11 @@ void Response::reset() {
 }
 
 Response::~Response() {
+
+  if (_cgi_pid > 0) {
+    kill(_cgi_pid, SIGKILL);
+    _cgi_pid = -1;
+  }
   delete_file(_cgi_tmp_filename);
   close_fd(_file_path_fd);
   close_fd(_cgi_pipe_fd);
@@ -669,7 +674,7 @@ void Response::handleDeleteRequest() {
     return;
   }
 
-  if (unlink(_filePath.c_str()) != 0) {
+  if (std::remove(_filePath.c_str()) != 0) {
     if (error_page("500") == 0) {
       _body = "<html><body> < h1>500 Internal Server Error</h1 > < p>Failed to "
               "delete the resource.</p></body></html>";

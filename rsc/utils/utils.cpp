@@ -70,7 +70,6 @@ std::string Logger::trace_http(const std::string &level, const std::string &ip,
     else
         method_str = method;
     
-    // Professional layout with moderate color
     std::ostringstream oss;
     oss << level_str << Color::CYAN << " [" << get_timestamp() << "]" << Color::RESET 
         << " " << Color::MAGENTA << ip << ":" << port << Color::RESET << " "
@@ -150,10 +149,9 @@ void delete_file(std::string &filename)
 {
     if (!filename.empty())
     {
-        if (access(filename.c_str(), F_OK) == 0)
+        if (std::remove(filename.c_str()) == 0)
         {
-            unlink(filename.c_str());
         }
         filename.clear();
     }
-};
+}

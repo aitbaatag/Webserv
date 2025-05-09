@@ -207,7 +207,7 @@ void handleClientTimeouts(
                   << std::endl;
         if (ctx->httpClient->res.getpid() > 0) {
           kill(ctx->httpClient->res.getpid(), SIGKILL);
-          std::cout << "process killed\n";
+          ctx->httpClient->res.resetpid();
         }
         handleClientDisconnection(ctx->httpClient, epfdMaster);
         it = FileDescriptorList.upper_bound(fd);

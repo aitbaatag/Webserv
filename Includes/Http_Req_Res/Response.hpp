@@ -106,7 +106,8 @@ class Response
 		void cgiWaitChild();
 		void cgiProcessResult();
 		void cgiCleanup();
-		pid_t getpid() {return _cgi_pid;};
+		pid_t	getpid() {return _cgi_pid;};
+		void  resetpid() {_cgi_pid = -1;};
 		void print_trace_http();
 
 	    static ServerConfig *findMatchingServer(std::vector<ServerConfig> &servers, Request &request);
