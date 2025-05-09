@@ -12,7 +12,7 @@ class Logger
 		static std::string get_timestamp();
 		static std::string get_time_only();
 		static std::string info(const std::string &message);
-		static std::string error(const std::string &message);
+		static void error(const std::string &message);
 		static std::string trace_http(const std::string &level, const std::string &ip,
                                     	unsigned short port, const std::string &method,
                                     	const std::string &path, const std::string &http_version,

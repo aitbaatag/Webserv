@@ -48,7 +48,7 @@ bool Response::handleCGIRequest()
 
 void Response::cgiInit()
 {
-	close_fd(_client->Srequest.fd_file);
+	lseek(_client->Srequest.fd_file, 0, SEEK_SET);
 	_cgi_envp.clear();
 	std::map<std::string, std::string>::const_iterator it;
 	for (it = _client->Srequest.headers.begin(); it != _client->Srequest.headers.end(); ++it)
@@ -89,11 +89,9 @@ void Response::cgiFork()
 
 	if (_cgi_pid == 0)
 	{
-		int file_fd;
+		int file_fd = _client->Srequest.fd_file;
 		if (_client->Srequest.filename.empty())
 			file_fd = open("/dev/null", O_RDONLY);
-		else
-			file_fd = open(_client->Srequest.filename.c_str(), O_RDONLY);
 		if (file_fd < 0)
 		{
 			perror("open request body file failed");

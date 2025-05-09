@@ -113,7 +113,7 @@ void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster)
 
 		catch (const std::exception &e)
 		{
-			std::cerr << Logger::error("Error processing request: " + std::string(e.what()));
+			Logger::error("Error processing request: " + std::string(e.what()));
 			return;
 		}
 	}
@@ -129,7 +129,7 @@ void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster)
 		}
 		catch (const std::exception &e)
 		{
-			std::cerr << Logger::error("Error sending response: " + std::string(e.what()));
+			Logger::error("Error sending response: " + std::string(e.what()));
 			return;
 		}
 	}
@@ -168,14 +168,10 @@ void cleanAllClientServer(
            FileDescriptorList.begin();
        it != FileDescriptorList.end(); ++it) {
     if (it->second) {
-      close(it->first);
-
       if (it->second->descriptorType == ServerSocketFd) {
-        close(it->second->serverSocket->get_socket_fd());
         delete it->second->serverSocket;
         it->second->serverSocket = NULL;
       } else if (it->second->descriptorType == ClientSocketFd) {
-        close(it->second->httpClient->get_socket_fd());
         delete it->second->httpClient;
         it->second->httpClient = NULL;
       }

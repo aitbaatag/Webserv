@@ -6,13 +6,13 @@ void ServerSocket::initialize_socket()
 {
 	socket_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (socket_fd_ < 0)
-		throw std::runtime_error(Logger::error("Failed to create socket: " + std::string(strerror(errno))));
+		throw std::runtime_error("Failed to create socket: " + std::string(strerror(errno)));
 
 	int opt = 1;
 	if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 	{
 		close(socket_fd_);
-		throw std::runtime_error(Logger::error("Failed to set socket options: " + std::string(strerror(errno))));
+		throw std::runtime_error("Failed to set socket options: " + std::string(strerror(errno)));
 		return;
 	}
 }
@@ -30,8 +30,7 @@ void ServerSocket::bind_socket()
 	int status = getaddrinfo(server_host_.c_str(), NULL, &hints, &res);
 	if (status != 0)
 	{
-		throw std::runtime_error(Logger::error("Failed to resolve host '" + server_host_ + "': " +
-			std::string(gai_strerror(status))));
+		throw std::runtime_error("Failed to resolve host '" + server_host_ + "': " + std::string(gai_strerror(status)));
 	}
 
 	server_address.sin_family = AF_INET;
@@ -45,14 +44,14 @@ void ServerSocket::bind_socket()
 
 	if (bind(socket_fd_, (struct sockaddr *) &server_address, sizeof(server_address)) < 0)
 	{
-		throw std::runtime_error(Logger::error("Bind failed: " + std::string(strerror(errno))));
+		throw std::runtime_error("Bind failed: " + std::string(strerror(errno)));
 	}
 }
 
 void ServerSocket::listen_for_connections()
 {
 	if (listen(socket_fd_, SOMAXCONN) < 0)
-		throw std::runtime_error(Logger::error("Failed to listen on socket: " + std::string(strerror(errno))));
+		throw std::runtime_error("Failed to listen on socket: " + std::string(strerror(errno)));
 }
 
 ServerSocket::~ServerSocket()
@@ -62,26 +61,25 @@ ServerSocket::~ServerSocket()
 
 ClientConnectionInfo ServerSocket::accept_connection()
 {
-	sockaddr_in client_addr;
-	ClientConnectionInfo client;
-	socklen_t client_len = sizeof(client_addr);
+    sockaddr_in client_addr;
+    ClientConnectionInfo client;
+    socklen_t client_len = sizeof(client_addr);
 
-	client.client_socket = accept(socket_fd_, (sockaddr*) &client_addr, &client_len);
-	if (client.client_socket < 0)
-	{
-		client.client_socket = -1;
-		return client;
-	}
+    client.client_socket = accept(socket_fd_, (sockaddr*) &client_addr, &client_len);
+    if (client.client_socket < 0)
+    {
+        throw std::runtime_error("accept() failed: " + std::string(strerror(errno)));
+    }
 
-	char ip_buffer[INET_ADDRSTRLEN];
-	if (inet_ntop(AF_INET, &(client_addr.sin_addr), ip_buffer, INET_ADDRSTRLEN))
-		client.client_ip = ip_buffer;
-	else
-		client.client_ip = "Unknown";
+    char ip_buffer[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &(client_addr.sin_addr), ip_buffer, INET_ADDRSTRLEN))
+        client.client_ip = ip_buffer;
+    else
+        client.client_ip = "Unknown";
 
-	client.client_port = ntohs(client_addr.sin_port);
+    client.client_port = ntohs(client_addr.sin_port);
 
-	return client;
+    return client;
 }
 
 
@@ -139,24 +137,37 @@ void ServerSocket::setupServerPort()
 
 void ServerSocket::handleClientConnection()
 {
-	HttpClient *hc;
-	ClientConnectionInfo client = accept_connection();
-	if (client.client_socket > 0)
+	ClientConnectionInfo client;
+	client.client_socket = -1;
+	try
 	{
-		hc = new HttpClient(client.client_socket, client.client_ip, client.client_port);
-		hc->client_ip = client.client_ip;
-		hc->server = this;
-
-		struct epoll_event ev;
-		ev.events = EPOLLIN | EPOLLOUT;
-		ev.data.fd = client.client_socket;
-		ev.data.ptr = EpollEventContext::createClientData(client.client_socket, hc);
-		scp->getFileDescriptorList()[client.client_socket] = (EpollEventContext *) ev.data.ptr;
-		if (epoll_ctl(epfdMaster, EPOLL_CTL_ADD, client.client_socket, &ev) < 0)
+		HttpClient * hc;
+		client = accept_connection();
+		if (client.client_socket > 0)
 		{
-			// handleClientDisconnection(client.client_socket);
-			throw std::runtime_error("Failed to add client to epoll");
+			hc = new HttpClient(client.client_socket, client.client_ip, client.client_port);
+			hc->client_ip = client.client_ip;
+			hc->server = this;
+
+			struct epoll_event ev;
+			ev.events = EPOLLIN | EPOLLOUT;
+			ev.data.fd = client.client_socket;
+			ev.data.ptr = EpollEventContext::createClientData(client.client_socket, hc);
+			scp->getFileDescriptorList()[client.client_socket] = (EpollEventContext*) ev.data.ptr;
+			if (epoll_ctl(epfdMaster, EPOLL_CTL_ADD, client.client_socket, &ev) < 0)
+			{
+				throw std::runtime_error("Failed to add client to epoll");
+			}
 		}
+	}
+
+	catch (const std::exception &e)
+	{
+		if (client.client_socket > 0)
+		{
+			close_fd(client.client_socket);
+		}
+		Logger::error("[handleClientConnection] " + std::string(e.what()));
 	}
 }
 

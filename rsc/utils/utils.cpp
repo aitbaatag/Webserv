@@ -24,11 +24,11 @@ std::string Logger::info(const std::string &message)
            message + "\n";
 }
 
-std::string Logger::error(const std::string &message)
+void Logger::error(const std::string &message)
 {
-    return Color::RED + Color::BOLD + "[ERROR]" + Color::RESET + 
-           Color::CYAN + " [" + get_time_only() + "]" + Color::RESET + " " + 
-           Color::YELLOW + message + Color::RESET + "\n";
+    std::cerr << Color::RED << Color::BOLD << "[ERROR]" << Color::RESET
+              << Color::CYAN << " [" << get_timestamp() << "]" << Color::RESET << " "
+              << Color::YELLOW << message << Color::RESET << std::endl;
 }
 
 std::string Logger::trace_http(const std::string &level, const std::string &ip,

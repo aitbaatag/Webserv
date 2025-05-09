@@ -81,22 +81,14 @@ int main(int argc, char **argv)
 			addConfigServer((configParser.getServers())[i], servers,
 				configParser.getEpfdMaster());
 		startServers(servers, configParser.getEpfdMaster());
-		for (size_t i = 0; i < servers.size(); ++i)
-		{
-			delete servers[i];
-		}
-
+		cleanAllClientServer(servers[0]->getServerConfigParser()->getFileDescriptorList());
 		return 0;
 	}
 
 	catch (const std::exception &e)
 	{
-		std::cerr << e.what();
-		for (size_t i = 0; i < servers.size(); ++i)
-		{
-			delete servers[i];
-		}
-
+		Logger::error(e.what());
+		cleanAllClientServer(servers[0]->getServerConfigParser()->getFileDescriptorList());
 		return 1;
 	}
 }

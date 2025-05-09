@@ -14,20 +14,20 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
     switch (client.SMrequest.stateRequestLine) {
     case STATE_METHOD:
       if (c == ' ') {
-        if (!validMethod(client, client.Srequest.method)) {
+        client.SMrequest.stateRequestLine = STATE_URI;
+      } else {
+        client.Srequest.method += c;
+        if (!validMethod(client.Srequest.method)) {
           client.Srequest.error_status = 405; // Method Not Allowed
           client.set_request_status(Failed);
           return false;
         }
-        client.SMrequest.stateRequestLine = STATE_URI;
-      } else {
-        client.Srequest.method += c;
       }
       break;
     case STATE_URI:
       if (c == ' ') {
-        if (client.Srequest.uri[0] != '/' || !isValidURI(client.Srequest.uri)) {
-          client.Srequest.error_status = 404; // Not Found
+        if (client.Srequest.uri[0] != '/') {
+          client.Srequest.error_status = 400; // Bad Request
           client.set_request_status(Failed);
           return false;
         } else {
@@ -37,19 +37,25 @@ bool HttpRequest::parseRequestLine(HttpClient &client) {
         }
       } else {
         client.Srequest.uri += c;
+        if (!isAllowedURICharacter(c))
+        {
+          client.Srequest.error_status = 400; // Bad Request
+          client.set_request_status(Failed);
+          return false;
+        }
       }
       break;
     case STATE_VERSION:
       if (c == '\r') {
-        if (!validHttpVersion(client.Srequest.version)) {
+          client.SMrequest.stateRequestLine = STATE_CRLF;
+      } else {
+        client.Srequest.version += c;
+        if (!validHttpVersion(client.Srequest.version))
+        {
           client.Srequest.error_status = 505; // HTTP Version Not Supported
           client.set_request_status(Failed);
           return false;
-        } else {
-          client.SMrequest.stateRequestLine = STATE_CRLF;
         }
-      } else {
-        client.Srequest.version += c;
       }
       break;
     case STATE_CRLF:
@@ -93,10 +99,15 @@ void HttpRequest::parseIncrementally(HttpClient &client) {
       }
 
     case STATE_BODY: {
-      client.server_config = Response::findMatchingServer(
-          client.server->getServerConfig(), client.Srequest);
-      client.route = Response::findMatchingRoute(*client.server_config,
-                                                 client.Srequest.path);
+      if (client.Srequest.headers.find("Host") == client.Srequest.headers.end())
+      {
+        client.Srequest.error_status = 400; // Bad Request
+        client.set_request_status(Failed);
+        return ;
+      }
+      client.server_config = Response::findMatchingServer(client.server->getServerConfig(), client.Srequest);
+      client.route = Response::findMatchingRoute(*client.server_config, client.Srequest.path);
+      
       for (int i = 0; i < client.route->accepted_methods.size(); i++) {
         if (client.Srequest.method == client.route->accepted_methods[i]) {
           break;

@@ -25,10 +25,10 @@ private:
   static bool directory_exists(const char *path);
 
   // parsing functions for request line
-  static bool validMethod(HttpClient &client, const std::string &method);
+  static bool validMethod(const std::string &partial);
+  
   static bool isAllowedURICharacter(char ch);
-  static bool isValidURI(const std::string &uri);
-  static bool validHttpVersion(const std::string &version);
+  static bool validHttpVersion(const std::string &partial);
   static char hexToChar(char hex1, char hex2);
   static void decodeRequestURI(HttpClient &client);
   static void parseURI(HttpClient &client);

@@ -41,12 +41,17 @@ unsigned long hexToULong(const std::string &hexStr) {
   return value;
 }
 
-bool HttpRequest::validMethod(HttpClient &Clinet, const std::string &method) {
-  if (method != GET && method != POST && method != DELETE) {
-    return false;
-  }
+bool HttpRequest::validMethod(const std::string &partial)
+{
+	const char *methods[] = { "GET", "POST", "DELETE" };
 
-  return true;
+	for (size_t i = 0; i < 3; ++i)
+	{
+		if (strncmp(methods[i], partial.c_str(), partial.size()) == 0)
+			return true;
+	}
+
+	return false;
 }
 
 void HttpRequest::parseURI(HttpClient &client) {
@@ -104,9 +109,6 @@ void HttpRequest::decodeRequestURI(HttpClient &client) {
   client.Srequest.uri = decodedURI;
 }
 
-// Unreserved characters: A-Z, a-z, 0-9, -, _, ., ~
-// Reserved characters: :, /, ?, #, [, ], @, !, $, &, ', (,), *, +, ,, ;, =
-// Percent-encoded characters (e.g., %20 for space) are Allowuered
 bool HttpRequest::isAllowedURICharacter(char ch) {
   if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
       (ch >= '0' && ch <= '9') || ch == '-' || ch == '_' || ch == '.' ||
@@ -128,25 +130,11 @@ bool HttpRequest::isAllowedURICharacter(char ch) {
   return false;
 }
 
-bool HttpRequest::isValidURI(const std::string &uri) {
-  for (size_t i = 0; i < uri.length(); ++i) {
-    if (uri[i] == '%') {
-      if (i + 2 >= uri.length() || !isxdigit(uri[i + 1]) ||
-          !isxdigit(uri[i + 2])) {
-        return false;
-      }
-    } else if (!isAllowedURICharacter(uri[i])) {
-      return false;
-    }
-  }
+bool HttpRequest::validHttpVersion(const std::string &partial)
+{
+  const char *methods = "HTTP/1.1";
+	if (strncmp(methods, partial.c_str(), partial.size()) == 0)
+			return true;
 
-  return true;
-}
-
-bool HttpRequest::validHttpVersion(const std::string &version) {
-  if (version != "HTTP/1.1") {
-    return false;
-  }
-
-  return true;
+	return false;
 }

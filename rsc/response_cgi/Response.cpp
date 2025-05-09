@@ -151,11 +151,9 @@ int Response::error_page(std::string error_code) {
 
   if (_client->server_config->error_page.find(error_code) !=
       _client->server_config->error_page.end()) {
-    std::string errorPagePath =
-        "." + _client->server_config->error_page.at(error_code);
+    std::string errorPagePath = "." + _client->server_config->error_page.at(error_code);
     struct stat fileStat;
-    if (stat(errorPagePath.c_str(), &fileStat) == 0 &&
-        !S_ISDIR(fileStat.st_mode)) {
+    if (stat(errorPagePath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
       int fd = open(errorPagePath.c_str(), O_RDONLY);
       if (fd != -1) {
         close_fd(_file_path_fd);
@@ -380,13 +378,17 @@ void Response::handleFileRequest() {
   }
 }
 
-ServerConfig *Response::findMatchingServer(std::vector<ServerConfig> &servers,
-                                           Request &request) {
+ServerConfig *Response::findMatchingServer(std::vector<ServerConfig> &servers, Request &request) {
+  std::map<std::string, std::string>::iterator hostIt = request.headers.find("Host");
+  if (hostIt == request.headers.end()) {
+    return &servers[0];
+  }
+  const std::string &host = hostIt->second;
+
   for (size_t i = 0; i < servers.size(); i++) {
     ServerConfig &server = servers[i];
-
     for (size_t j = 0; j < server.server_names.size(); j++) {
-      if (server.server_names[j] == request.headers.at("Host")) {
+      if (server.server_names[j] == host) {
         return &server;
       }
     }
@@ -503,7 +505,14 @@ bool fd_getline(int fd, std::string &line) {
   return (!line.empty() || n == 1);
 }
 
-void Response::handleLoginRequest() {
+void Response::handleLoginRequest()
+{
+  if (_client->Srequest.body_length >= 200)
+  {
+    _body = "status:error\nmessage:large input";
+    return ;
+
+  }
   std::string action, username, note;
   std::string line;
 
