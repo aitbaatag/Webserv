@@ -107,6 +107,7 @@ class Response
 		void cgiProcessResult();
 		void cgiCleanup();
 		pid_t getpid() {return _cgi_pid;};
+		void print_trace_http();
 
 	    static ServerConfig *findMatchingServer(std::vector<ServerConfig> &servers, Request &request);
 	    static Route *findMatchingRoute(ServerConfig &server, std::string &path);

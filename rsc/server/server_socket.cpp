@@ -55,12 +55,9 @@ void ServerSocket::listen_for_connections()
 		throw std::runtime_error(Logger::error("Failed to listen on socket: " + std::string(strerror(errno))));
 }
 
-ServerSocket::~ServerSocket() {
-    if (socket_fd_ > 0)
-	{
-        close(socket_fd_);
-        socket_fd_ = -1;
-    }
+ServerSocket::~ServerSocket()
+{
+	close_fd(socket_fd_);
 }
 
 ClientConnectionInfo ServerSocket::accept_connection()

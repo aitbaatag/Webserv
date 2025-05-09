@@ -33,14 +33,15 @@ Status HttpClient::get_request_status() { return request_status_; }
 
 Status HttpClient::get_response_status() { return response_status_; }
 
-void HttpClient::append_to_request() {
+bool HttpClient::append_to_request() {
   pos_ = 0;
   bytes_received = recv(socket_fd_, buffer, MAX_RECV - 1, 0);
   if (bytes_received <= 0) {
     request_status_ = Disc;
-    return;
+    return false;
   }
   time_client_ = time(NULL);
+  return true;
 }
 
 void HttpClient::update_pos(int new_pos) { pos_ = new_pos; }
@@ -100,65 +101,65 @@ void handleConnectionHeader(HttpClient **c, int epfdMaster) {
     return;
   }
 }
+void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster)
+{
+	if ((event->events &EPOLLIN) && c && c->get_request_status() == InProgress)
+	{
+		try
+		{
+			if (c->append_to_request())
+        HttpRequest::parseIncrementally(*c);        
+		}
 
-void processEpollEvents(epoll_event *event, HttpClient *c, int epfdMaster) {
-  // Handle EPOLLIN: Read request data
-  if ((event->events & EPOLLIN) && c && c->get_request_status() == InProgress) {
-    try {
-      c->append_to_request();
-      HttpRequest::parseIncrementally(*c);
-    }
-
-    catch (const std::exception &e) {
-      std::cerr << Logger::error("Error processing request: " +
-                                 std::string(e.what()));
-      return;
-    }
-  }
-
-  // Handle EPOLLOUT: Send response data
-  if ((event->events & EPOLLOUT) && c &&
-      (c->get_request_status() == Complete ||
-       c->get_request_status() == Failed)) {
-    try {
-      c->res.response_handler();
-
-      if (c->get_response_status() == Complete) {
-        handleConnectionHeader(&c, epfdMaster);
-      }
-    }
-
-    catch (const std::exception &e) {
-      std::cerr << Logger::error("Error sending response: " +
-                                 std::string(e.what()));
-      return;
-    }
-  }
-  if (c) {
-    c->getReadTrack().clear();
-    c->getWriteTrack().clear();
-  }
+		catch (const std::exception &e)
+		{
+			std::cerr << Logger::error("Error processing request: " + std::string(e.what()));
+			return;
+		}
+	}
+	if ((event->events &EPOLLOUT) && c && (c->get_request_status() == Complete || c->get_request_status() == Failed))
+	{
+		try
+		{
+			c->res.response_handler();
+			if (c->get_response_status() == Complete)
+			{
+				handleConnectionHeader(&c, epfdMaster);
+			}
+		}
+		catch (const std::exception &e)
+		{
+			std::cerr << Logger::error("Error sending response: " + std::string(e.what()));
+			return;
+		}
+	}
+  if (c && c->get_request_status() == Disc)
+    handleClientDisconnection(c, epfdMaster);
 }
 
-void handleClientDisconnection(HttpClient *c, int epfdMaster) {
-  int fd = c->socket_fd_;
+void handleClientDisconnection(HttpClient *c, int epfdMaster)
+{
+	int fd = c->socket_fd_;
 
-  if (epoll_ctl(epfdMaster, EPOLL_CTL_DEL, fd, NULL) == -1) {
-    Logger::error("Failed to remove client " + to_string(fd) +
-                  " from epoll: " + std::string(strerror(errno)));
-  }
-  std::map<int, EpollEventContext *> &FileDescriptorList =
-      c->server->getServerConfigParser()->getFileDescriptorList();
-  EpollEventContext *ctx = FileDescriptorList[fd];
-  if (ctx) {
-    if (ctx->httpClient) {
-      delete ctx->httpClient;
-      ctx->httpClient = NULL;
-    }
-    delete ctx;
-    FileDescriptorList[fd] = NULL;
-  }
-  FileDescriptorList.erase(fd);
+	if (epoll_ctl(epfdMaster, EPOLL_CTL_DEL, fd, NULL) == -1)
+	{
+		Logger::error("Failed to remove client " + to_string(fd) + " from epoll: " + std::string(strerror(errno)));
+	}
+	std::map<int, EpollEventContext *> &FileDescriptorList = c->server->getServerConfigParser()->getFileDescriptorList();
+	EpollEventContext *ctx = FileDescriptorList[fd];
+	if (ctx)
+	{
+		if (ctx->httpClient)
+		{
+			delete ctx->httpClient;
+			ctx->httpClient = NULL;
+		}
+
+		delete ctx;
+		FileDescriptorList[fd] = NULL;
+	}
+
+	FileDescriptorList.erase(fd);
 }
 
 void cleanAllClientServer(

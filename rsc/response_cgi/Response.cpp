@@ -682,7 +682,31 @@ void Response::handleDeleteRequest() {
           "successfully.</p></body></html>";
 }
 
-void Response::response_handler() {
+
+void Response::print_trace_http()
+{
+    std::string method = _client->Srequest.method;
+    if (method != "GET" && method != "POST" && method != "DELETE")
+        method = "UNKNOWN";
+
+    std::string path;
+    for (size_t i = 0; i < _client->Srequest.path.size(); ++i) {
+        if (!isspace(_client->Srequest.path[i]))
+            path += _client->Srequest.path[i];
+    }
+
+    if (path.length() > 15)
+        path = path.substr(0, 12) + "...";
+
+    std::cout << Logger::trace_http(
+        "TRACE", _client->client_ip, _client->client_port,
+        method, path,
+        _client->Srequest.version, _client->res._status,
+        to_string(current_time_in_ms() - _client->time_start_));
+}
+
+void Response::response_handler()
+{
   switch (_handlerState) {
   case HSTATE_ERROR_CHECK:
 
@@ -752,20 +776,16 @@ void Response::response_handler() {
   }
 
   case HSTATE_SEND_BODY: {
-    if (sendResponseChunk(false)) {
+    if (sendResponseChunk(false))
+    {
       _handlerState = HSTATE_COMPLETE;
     }
-
     break;
   }
 
   case HSTATE_COMPLETE:
     _client->set_response_status(Complete);
-    std::cout << Logger::trace_http(
-        "TRACE", _client->client_ip, _client->client_port,
-        _client->Srequest.method, _client->Srequest.path,
-        _client->Srequest.version, _client->res._status,
-        to_string(current_time_in_ms() - _client->time_start_));
+    print_trace_http();
     break;
 
   case HSTATE_ERROR:
@@ -773,86 +793,102 @@ void Response::response_handler() {
   }
 }
 
-bool Response::sendResponseChunk(bool sendHeader) {
-  if (sendHeader) {
-    if (_headerSent < _headerBuffer.size()) {
-      ssize_t bytesSent =
-          send(_client->get_socket_fd(), _headerBuffer.c_str() + _headerSent,
-               _headerBuffer.size() - _headerSent, 0);
-      if (bytesSent < 0) {
-        std::cerr << "Error sending response headers to client FD "
-                  << _client->get_socket_fd() << std::endl;
-        return true;
-      }
+bool Response::sendResponseChunk(bool sendHeader)
+{
+	if (sendHeader)
+	{
+		if (_headerSent < _headerBuffer.size())
+		{
+			ssize_t bytesSent =
+				send(_client->get_socket_fd(), _headerBuffer.c_str() + _headerSent,
+					_headerBuffer.size() - _headerSent, 0);
+			if (bytesSent <= 0)
+			{
+				std::cerr << "Error sending response headers to client FD " << _client->get_socket_fd() << std::endl;
+				_client->set_request_status(Disc);
+				return true;
+			}
 
-      _headerSent += bytesSent;
-      _client->time_client_ = time(NULL);
-      if (_headerSent < _headerBuffer.size())
-        return false;
-    }
+			_headerSent += bytesSent;
+			_client->time_client_ = time(NULL);
+			if (_headerSent < _headerBuffer.size())
+				return false;
+		}
 
-    return true;
-  }
+		return true;
+	}
 
-  if (_body.size() > 0) {
-    if (_bytesSent < _bytesToSend) {
-      ssize_t bytesSent =
-          send(_client->get_socket_fd(), _body.c_str() + _bytesSent,
-               _bytesToSend - _bytesSent, 0);
+	if (_body.size() > 0)
+	{
+		if (_bytesSent < _bytesToSend)
+		{
+			ssize_t bytesSent =
+				send(_client->get_socket_fd(), _body.c_str() + _bytesSent,
+					_bytesToSend - _bytesSent, 0);
 
-      if (bytesSent < 0) {
-        std::cerr << "Error sending response body to client FD "
-                  << _client->get_socket_fd() << std::endl;
-        return true;
-      }
+			if (bytesSent <= 0)
+			{
+				std::cerr << "Error sending response body to client FD " << _client->get_socket_fd() << std::endl;
+				_client->set_request_status(Disc);
+				return true;
+			}
 
-      _bytesSent += bytesSent;
-      _client->time_client_ = time(NULL);
-    }
+			_bytesSent += bytesSent;
+			_client->time_client_ = time(NULL);
+		}
 
-    return (_bytesSent >= _bytesToSend);
-  }
+		return (_bytesSent >= _bytesToSend);
+	}
 
-  if (_file_path_fd > 0) {
-    switch (_sendState) {
-    case SEND_IDLE:
+	if (_file_path_fd > 0)
+	{
+		switch (_sendState)
+		{
+			case SEND_IDLE:
 
-    case SEND_READING:
-      _bufferLen = read(_file_path_fd, _buffer, MAX_SEND);
-      _bufferSent = 0;
-      if (_bufferLen > 0) {
-        _sendState = SEND_SENDING;
-      } else {
-        close_fd(_file_path_fd);
-        _sendState = SEND_DONE;
-        return true;
-      }
+			case SEND_READING:
+				_bufferLen = read(_file_path_fd, _buffer, MAX_SEND);
+				_bufferSent = 0;
+				if (_bufferLen > 0)
+				{
+					_sendState = SEND_SENDING;
+				}
+				else
+				{
+					close_fd(_file_path_fd);
+					_sendState = SEND_DONE;
+					return true;
+				}
 
-    case SEND_SENDING:
-      if (_bufferSent < _bufferLen) {
-        ssize_t bytesSent =
-            send(_client->get_socket_fd(), _buffer + _bufferSent,
-                 _bufferLen - _bufferSent, 0);
-        if (bytesSent < 0) {
-          std::cerr << "Error sending file chunk to client FD "
-                    << _client->get_socket_fd() << std::endl;
-          close_fd(_file_path_fd);
-          _sendState = SEND_DONE;
-          return true;
-        }
+			case SEND_SENDING:
+				if (_bufferSent < _bufferLen)
+				{
+					ssize_t bytesSent =
+						send(_client->get_socket_fd(), _buffer + _bufferSent,
+							_bufferLen - _bufferSent, 0);
+					if (bytesSent <= 0)
+					{
+						std::cerr << "Error sending file chunk to client FD " << _client->get_socket_fd() << std::endl;
+						close_fd(_file_path_fd);
+						_sendState = SEND_DONE;
+						_client->set_request_status(Disc);
+						return true;
+					}
+					_bufferSent += bytesSent;
+					_client->time_client_ = time(NULL);
+				}
 
-        _bufferSent += bytesSent;
-        _client->time_client_ = time(NULL);
-      }
+				if (_bufferSent >= _bufferLen)
+				{
+					_sendState = SEND_READING;
+				}
 
-      if (_bufferSent >= _bufferLen) {
-        _sendState = SEND_READING;
-      }
-      return false;
+				return false;
 
-    case SEND_DONE:
-      return true;
-    }
-  }
-  return false;
+			case SEND_DONE:
+				return true;
+		}
+	}
+
+	return false;
 }

@@ -36,7 +36,6 @@ std::string Logger::trace_http(const std::string &level, const std::string &ip,
                     std::string status_code,
                     std::string duration_ms)
 {
-    // Level coloring
     std::string level_str;
     if (level == "ERROR")
         level_str = Color::RED + Color::BOLD + "[" + level + "]" + Color::RESET;
@@ -47,7 +46,6 @@ std::string Logger::trace_http(const std::string &level, const std::string &ip,
     else
         level_str = Color::BOLD + "[" + level + "]" + Color::RESET;
     
-    // Status code coloring
     std::string status_str;
     if (status_code.substr(0, 1) == "2")
         status_str = Color::GREEN + status_code + Color::RESET;
@@ -60,13 +58,12 @@ std::string Logger::trace_http(const std::string &level, const std::string &ip,
     else
         status_str = status_code;
     
-    // HTTP method coloring
     std::string method_str;
     if (method == "GET")
         method_str = Color::GREEN + method + Color::RESET;
     else if (method == "POST")
         method_str = Color::YELLOW + method + Color::RESET;
-    else if (method == "DELETE")
+    else if (method == "DELETE" || method == "UNKNOWN")
         method_str = Color::RED + method + Color::RESET;
     else if (method == "PUT")
         method_str = Color::YELLOW + method + Color::RESET;

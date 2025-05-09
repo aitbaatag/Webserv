@@ -61,7 +61,7 @@ class HttpClient
 		void                update_pos(int new_pos);
 
 		// Operations
-		void                append_to_request();
+		bool                append_to_request();
 		void				reset();
 
 		std::set<int>&		getReadTrack() {return readTrack;};
