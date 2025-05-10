@@ -168,10 +168,7 @@ void cleanAllClientServer(
            FileDescriptorList.begin();
        it != FileDescriptorList.end(); ++it) {
     if (it->second) {
-      if (it->second->descriptorType == ServerSocketFd) {
-        delete it->second->serverSocket;
-        it->second->serverSocket = NULL;
-      } else if (it->second->descriptorType == ClientSocketFd) {
+      if (it->second->descriptorType == ClientSocketFd) {
         delete it->second->httpClient;
         it->second->httpClient = NULL;
       }

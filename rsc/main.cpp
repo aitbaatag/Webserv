@@ -83,6 +83,7 @@ int main(int argc, char **argv)
 		for (size_t i = 0; i < servers.size(); ++i) {
 			delete servers[i];
 		}
+		cleanAllClientServer(configParser.getFileDescriptorList());
 		return 0;
 	}
 
@@ -92,6 +93,8 @@ int main(int argc, char **argv)
 		for (size_t i = 0; i < servers.size(); ++i) {
 			delete servers[i];
 		}
+		cleanAllClientServer(configParser.getFileDescriptorList());
+
 		return 1;
 	}
 }
