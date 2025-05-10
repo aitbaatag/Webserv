@@ -78,17 +78,20 @@ int main(int argc, char **argv)
 	{
 		configParser.parseConfigFile(argc, argv);
 		for (size_t i = 0; i < (configParser.getServers()).size(); i++)
-			addConfigServer((configParser.getServers())[i], servers,
-				configParser.getEpfdMaster());
+			addConfigServer((configParser.getServers())[i], servers, configParser.getEpfdMaster());
 		startServers(servers, configParser.getEpfdMaster());
-		cleanAllClientServer(servers[0]->getServerConfigParser()->getFileDescriptorList());
+		for (size_t i = 0; i < servers.size(); ++i) {
+			delete servers[i];
+		}
 		return 0;
 	}
 
 	catch (const std::exception &e)
 	{
 		Logger::error(e.what());
-		cleanAllClientServer(servers[0]->getServerConfigParser()->getFileDescriptorList());
+		for (size_t i = 0; i < servers.size(); ++i) {
+			delete servers[i];
+		}
 		return 1;
 	}
 }

@@ -121,7 +121,7 @@ void ServerSocket::startServer()
 		{
 			close_fd(socket_fd_);
 		}
-		throw;
+		Logger::error("[startServer] " + std::string(e.what()));
 	}
 }
 
